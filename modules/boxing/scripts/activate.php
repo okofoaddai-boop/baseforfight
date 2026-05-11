@@ -1,0 +1,282 @@
+<?php
+
+declare(strict_types=1);
+
+$settingsDir  = base_path('modules/boxing/settings');
+$packagesDir  = $settingsDir . DIRECTORY_SEPARATOR . 'packages';
+
+foreach ([$settingsDir, $packagesDir] as $dir) {
+    if (! is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+}
+
+// ── active_package.json ──────────────────────────────────────────────────────
+$activeFile = $settingsDir . DIRECTORY_SEPARATOR . 'active_package.json';
+if (! is_file($activeFile)) {
+    file_put_contents($activeFile, json_encode(['active' => 'dbv'], JSON_PRETTY_PRINT) . PHP_EOL);
+}
+
+// ── packages/dbv.json ─────────────────────────────────────────────────────────
+$dbvFile = $packagesDir . DIRECTORY_SEPARATOR . 'dbv.json';
+if (! is_file($dbvFile)) {
+    $dbvPackage = [
+        'name' => 'DBV Wettkampfordnung',
+        'source' => 'Deutscher Boxsport-Verband e.V. (DBV)',
+        'pass_keywords' => ['Arzt gültig bis', 'KO-Sperre gültig bis', 'Registrierung gültig bis'],
+        'performance_classes' => [
+            ['key' => 'C', 'name' => 'Klasse C', 'wins_min' => null, 'wins_max' => 6],
+            ['key' => 'B', 'name' => 'Klasse B', 'wins_min' => 7, 'wins_max' => 14],
+            ['key' => 'A', 'name' => 'Klasse A', 'wins_min' => 15, 'wins_max' => null],
+        ],
+        'age_classes' => [
+            'SC' => [
+                'name' => 'Schüler',
+                'alter' => 13,
+                'sex' => 'm',
+                'time' => ['A' => 90, 'B' => 90, 'C' => 90],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '40' => ['name' => 'Papiergewicht', 'short' => '40', 'note' => '10 Unzen'],
+                    '42' => ['name' => 'Papiergewicht', 'short' => '42', 'note' => '10 Unzen'],
+                    '44' => ['name' => 'Papiergewicht', 'short' => '44', 'note' => '10 Unzen'],
+                    '46' => ['name' => 'Papiergewicht', 'short' => '46', 'note' => '10 Unzen'],
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '52' => ['name' => 'Halbbantamgewicht', 'short' => '52', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '63' => ['name' => 'Halbweltergewicht', 'short' => '63', 'note' => '10 Unzen'],
+                    '66' => ['name' => 'Weltergewicht', 'short' => '66', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'SCW' => [
+                'name' => 'Schülerinnen',
+                'alter' => 13,
+                'sex' => 'w',
+                'time' => ['A' => 90, 'B' => 90, 'C' => 90],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '40' => ['name' => 'Papiergewicht', 'short' => '40', 'note' => '10 Unzen'],
+                    '42' => ['name' => 'Papiergewicht', 'short' => '42', 'note' => '10 Unzen'],
+                    '44' => ['name' => 'Papiergewicht', 'short' => '44', 'note' => '10 Unzen'],
+                    '46' => ['name' => 'Papiergewicht', 'short' => '46', 'note' => '10 Unzen'],
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '52' => ['name' => 'Halbbantamgewicht', 'short' => '52', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '63' => ['name' => 'Halbweltergewicht', 'short' => '63', 'note' => '10 Unzen'],
+                    '66' => ['name' => 'Weltergewicht', 'short' => '66', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'KD' => [
+                'name' => 'Kadetten',
+                'alter' => 15,
+                'sex' => 'm',
+                'time' => ['A' => 90, 'B' => 90, 'C' => 90],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '40' => ['name' => 'Papiergewicht', 'short' => '40', 'note' => '10 Unzen'],
+                    '42' => ['name' => 'Papiergewicht', 'short' => '42', 'note' => '10 Unzen'],
+                    '44' => ['name' => 'Papiergewicht', 'short' => '44', 'note' => '10 Unzen'],
+                    '46' => ['name' => 'Papiergewicht', 'short' => '46', 'note' => '10 Unzen'],
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '52' => ['name' => 'Halbbantamgewicht', 'short' => '52', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '63' => ['name' => 'Halbweltergewicht', 'short' => '63', 'note' => '10 Unzen'],
+                    '66' => ['name' => 'Weltergewicht', 'short' => '66', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'KDW' => [
+                'name' => 'Kadettinnen',
+                'alter' => 15,
+                'sex' => 'w',
+                'time' => ['A' => 90, 'B' => 90, 'C' => 90],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '40' => ['name' => 'Papiergewicht', 'short' => '40', 'note' => '10 Unzen'],
+                    '42' => ['name' => 'Papiergewicht', 'short' => '42', 'note' => '10 Unzen'],
+                    '44' => ['name' => 'Papiergewicht', 'short' => '44', 'note' => '10 Unzen'],
+                    '46' => ['name' => 'Papiergewicht', 'short' => '46', 'note' => '10 Unzen'],
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '52' => ['name' => 'Halbbantamgewicht', 'short' => '52', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '63' => ['name' => 'Halbweltergewicht', 'short' => '63', 'note' => '10 Unzen'],
+                    '66' => ['name' => 'Weltergewicht', 'short' => '66', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'JN' => [
+                'name' => 'Junioren',
+                'alter' => 17,
+                'sex' => 'm',
+                'time' => ['A' => 90, 'B' => 90, 'C' => 90],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '42' => ['name' => 'Papiergewicht', 'short' => '42', 'note' => '10 Unzen'],
+                    '44' => ['name' => 'Papiergewicht', 'short' => '44', 'note' => '10 Unzen'],
+                    '46' => ['name' => 'Papiergewicht', 'short' => '46', 'note' => '10 Unzen'],
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '52' => ['name' => 'Halbbantamgewicht', 'short' => '52', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '63' => ['name' => 'Halbweltergewicht', 'short' => '63', 'note' => '10 Unzen'],
+                    '66' => ['name' => 'Weltergewicht', 'short' => '66', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'JNW' => [
+                'name' => 'Juniorinnen',
+                'alter' => 17,
+                'sex' => 'w',
+                'time' => ['A' => 90, 'B' => 90, 'C' => 90],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '42' => ['name' => 'Papiergewicht', 'short' => '42', 'note' => '10 Unzen'],
+                    '44' => ['name' => 'Papiergewicht', 'short' => '44', 'note' => '10 Unzen'],
+                    '46' => ['name' => 'Papiergewicht', 'short' => '46', 'note' => '10 Unzen'],
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '52' => ['name' => 'Halbbantamgewicht', 'short' => '52', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '63' => ['name' => 'Halbweltergewicht', 'short' => '63', 'note' => '10 Unzen'],
+                    '66' => ['name' => 'Weltergewicht', 'short' => '66', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'JG' => [
+                'name' => 'Jugend männlich',
+                'alter' => 19,
+                'sex' => 'm',
+                'time' => ['A' => 180, 'B' => 120, 'C' => 120],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '55' => ['name' => 'Bantamgewicht', 'short' => '55', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '65' => ['name' => 'Weltergewicht', 'short' => '65', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '85' => ['name' => 'Cruisergewicht', 'short' => '85', 'note' => '12 Unzen'],
+                    '90' => ['name' => 'Schwergewicht', 'short' => '90', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Superschwergewicht', 'short' => '90+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'JGW' => [
+                'name' => 'Jugend weiblich',
+                'alter' => 19,
+                'sex' => 'w',
+                'time' => ['A' => 180, 'B' => 120, 'C' => 120],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '51' => ['name' => 'Fliegengewicht', 'short' => '51', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '65' => ['name' => 'Weltergewicht', 'short' => '65', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'M' => [
+                'name' => 'Männer',
+                'alter' => 99,
+                'sex' => 'm',
+                'time' => ['A' => 180, 'B' => 120, 'C' => 120],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '50' => ['name' => 'Fliegengewicht', 'short' => '50', 'note' => '10 Unzen'],
+                    '55' => ['name' => 'Bantamgewicht', 'short' => '55', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '65' => ['name' => 'Weltergewicht', 'short' => '65', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '85' => ['name' => 'Cruisergewicht', 'short' => '85', 'note' => '12 Unzen'],
+                    '90' => ['name' => 'Schwergewicht', 'short' => '90', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Superschwergewicht', 'short' => '90+', 'note' => '12 Unzen'],
+                ],
+            ],
+            'W' => [
+                'name' => 'Frauen',
+                'alter' => 99,
+                'sex' => 'w',
+                'time' => ['A' => 180, 'B' => 120, 'C' => 120],
+                'break' => ['A' => 60, 'B' => 60, 'C' => 60],
+                'rounds' => ['A' => 3, 'B' => 3, 'C' => 3],
+                'gewicht' => [
+                    '48' => ['name' => 'Halbfliegengewicht', 'short' => '48', 'note' => '10 Unzen'],
+                    '51' => ['name' => 'Fliegengewicht', 'short' => '51', 'note' => '10 Unzen'],
+                    '54' => ['name' => 'Bantamgewicht', 'short' => '54', 'note' => '10 Unzen'],
+                    '57' => ['name' => 'Federgewicht', 'short' => '57', 'note' => '10 Unzen'],
+                    '60' => ['name' => 'Leichtgewicht', 'short' => '60', 'note' => '10 Unzen'],
+                    '65' => ['name' => 'Weltergewicht', 'short' => '65', 'note' => '10 Unzen'],
+                    '70' => ['name' => 'Halbmittelgewicht', 'short' => '70', 'note' => '12 Unzen'],
+                    '75' => ['name' => 'Mittelgewicht', 'short' => '75', 'note' => '12 Unzen'],
+                    '80' => ['name' => 'Halbschwergewicht', 'short' => '80', 'note' => '12 Unzen'],
+                    '180' => ['name' => 'Schwergewicht', 'short' => '80+', 'note' => '12 Unzen'],
+                ],
+            ],
+        ],
+    ];
+    $json = json_encode($dbvPackage, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (is_string($json)) {
+        file_put_contents($dbvFile, $json . PHP_EOL);
+    }
+}
+
+// ── Legacy flat file (no longer written, but note for completeness) ────────────
+// age-classes.json and performance-classes.json are no longer used.
+// Data now lives in packages/*.json
+
+// The old $defaults loop is replaced above.
+// Legacy files (age-classes.json, performance-classes.json, weight-classes-packages.json)
+// are no longer seeded — all data lives in packages/*.json
+

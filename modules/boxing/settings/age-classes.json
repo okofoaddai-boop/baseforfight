@@ -1,0 +1,41 @@
+{
+    "source": "DBV §11",
+    "stichtag": "31.12. Vorjahr",
+    "classes": [
+        {
+            "key": "u13",
+            "name": "Schueler (U13)",
+            "age_min": 10,
+            "age_max": 12
+        },
+        {
+            "key": "u15",
+            "name": "Kadetten (U15)",
+            "age_min": 13,
+            "age_max": 14
+        },
+        {
+            "key": "u17",
+            "name": "Junioren (U17)",
+            "age_min": 15,
+            "age_max": 16
+        },
+        {
+            "key": "u19",
+            "name": "Jugend (U19)",
+            "age_min": 17,
+            "age_max": 18
+        },
+        {
+            "key": "adults",
+            "name": "Frauen und Maenner",
+            "age_min": 19,
+            "age_max": null
+        }
+    ],
+    "notes": [
+        "Start offizieller Wettkampf ab 10. Geburtstag.",
+        "Jugendklassen U13/U15/U17/U19: Altersunterschied max. 24 Monate.",
+        "Jugend gegen Erwachsene nur bis max. 24 Monate Unterschied und mit Jugendschutzbestimmungen."
+    ]
+}

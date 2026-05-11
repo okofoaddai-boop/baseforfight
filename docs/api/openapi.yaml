@@ -1,0 +1,197 @@
+openapi: 3.0.3
+info:
+  title: BaseForFight API
+  version: 1.0.0
+  description: Initial API contract for v1 foundation.
+servers:
+  - url: http://baseforfight.test/api/v1
+paths:
+  /health:
+    get:
+      summary: API health check
+      responses:
+        '200':
+          description: Service state
+  /auth/token:
+    post:
+      summary: Issue Sanctum token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Token issued
+        '422':
+          description: Invalid credentials
+    delete:
+      summary: Revoke current token
+      security:
+        - sanctumAuth: []
+      responses:
+        '204':
+          description: Token revoked
+  /clubs:
+    get:
+      summary: List clubs for current user
+      security:
+        - sanctumAuth: []
+      responses:
+        '200':
+          description: Club list
+    post:
+      summary: Create club
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClubCreateRequest'
+      responses:
+        '201':
+          description: Club created
+  /clubs/{clubId}/invitations:
+    post:
+      summary: Invite member to club
+      security:
+        - sanctumAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClubId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClubInvitationRequest'
+      responses:
+        '201':
+          description: Invitation created
+  /clubs/invitations/accept:
+    post:
+      summary: Accept invitation token
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Invitation accepted
+  /events:
+    post:
+      summary: Create event
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreateRequest'
+      responses:
+        '201':
+          description: Event created
+  /registrations:
+    post:
+      summary: Register fighter to event
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationCreateRequest'
+      responses:
+        '201':
+          description: Registration created
+        '422':
+          description: Rule violation
+components:
+  securitySchemes:
+    sanctumAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+  parameters:
+    ClubId:
+      name: clubId
+      in: path
+      required: true
+      schema:
+        type: integer
+  schemas:
+    TokenRequest:
+      type: object
+      required: [email, password, device_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        device_name:
+          type: string
+    ClubCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    ClubInvitationRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, admin, coach, member]
+    EventCreateRequest:
+      type: object
+      required: [title, starts_at, organizer_club_id]
+      properties:
+        title:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        registration_deadline:
+          type: string
+          format: date-time
+        max_registrations:
+          type: integer
+        location:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, cancelled]
+        organizer_club_id:
+          type: integer
+    RegistrationCreateRequest:
+      type: object
+      required: [fighter_id, event_id]
+      properties:
+        fighter_id:
+          type: integer
+        event_id:
+          type: integer
+        notes:
+          type: string

@@ -1,0 +1,28 @@
+{
+    "source": "DBV §12",
+    "classes": [
+        {
+            "key": "C",
+            "name": "Leistungsklasse C",
+            "rule": "weniger als 7 Siege"
+        },
+        {
+            "key": "B",
+            "name": "Leistungsklasse B",
+            "rule": "7 bis 14 Siege"
+        },
+        {
+            "key": "A",
+            "name": "Leistungsklasse A",
+            "rule": "mehr als 14 Siege"
+        },
+        {
+            "key": "ELITE",
+            "name": "Elite",
+            "rule": "ab 19 Jahren und mehr als 25 Siege oder internationale Vertretung DBV"
+        }
+    ],
+    "notes": [
+        "Kickbox-/artverwandte Kampfsporterfahrung muss gemeldet werden, Einstufung durch Sportwart."
+    ]
+}

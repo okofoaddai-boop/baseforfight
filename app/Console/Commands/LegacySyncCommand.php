@@ -246,6 +246,7 @@ class LegacySyncCommand extends Command
             [$newUserId, $created] = $this->upsertUser(
                 $email,
                 [
+                    'email' => $email,
                     'name' => $fullName,
                     'first_name' => $firstName !== '' ? $firstName : null,
                     'last_name' => $lastName !== '' ? $lastName : null,

@@ -92,6 +92,27 @@ class LegacySyncCommand extends Command
      */
     private array $legacyEventDocs = [];
 
+    /**
+     * @var array<string, int>
+     */
+    private array $dryRunIdCounters = [
+        'user' => 0,
+        'club' => 0,
+        'fighter' => 0,
+        'event' => 0,
+        'registration' => 0,
+    ];
+
+    /**
+     * @var array<string, int>
+     */
+    private array $dryRunUserByEmail = [];
+
+    /**
+     * @var array<string, int>
+     */
+    private array $dryRunEntityByLegacy = [];
+
     public function handle(ClubPermissionService $clubPermissionService): int
     {
         $this->dryRun = (bool) $this->option('dry-run');
@@ -490,7 +511,14 @@ class LegacySyncCommand extends Command
             return [$id, true];
         }
 
-        return [0, true];
+        if (isset($this->dryRunUserByEmail[$email])) {
+            return [$this->dryRunUserByEmail[$email], false];
+        }
+
+        $virtualId = $this->nextDryRunId('user');
+        $this->dryRunUserByEmail[$email] = $virtualId;
+
+        return [$virtualId, true];
     }
 
     private function resolveOrCreateClub(string $legacyClubName, int $legacyUserId, int $newUserId, ?object $userData): Club
@@ -502,7 +530,7 @@ class LegacySyncCommand extends Command
 
             if ($this->dryRun || $clubId <= 0) {
                 $club = new Club();
-                $club->id = 0;
+                $club->id = $clubId;
                 $club->name = $exact;
                 $club->slug = Str::slug($exact) ?: 'club-' . $legacyUserId;
             } else {
@@ -549,8 +577,11 @@ class LegacySyncCommand extends Command
             $clubId = (int) $this->target->table('clubs')->insertGetId($payload);
             $club = Club::query()->findOrFail($clubId);
         } else {
+            $clubId = $this->nextDryRunId('club');
             $club = new Club();
-            $club->id = 0;
+            $club->id = $clubId;
+            $club->name = $exact;
+            $club->slug = $slug;
         }
 
         $this->clubByExactName[$exact] = (int) $club->getKey();
@@ -590,7 +621,15 @@ class LegacySyncCommand extends Command
             return [$newId, true];
         }
 
-        return [0, true];
+        $mapKey = $entity . ':' . $legacyId;
+        if (isset($this->dryRunEntityByLegacy[$mapKey])) {
+            return [$this->dryRunEntityByLegacy[$mapKey], false];
+        }
+
+        $virtualId = $this->nextDryRunId($entity);
+        $this->dryRunEntityByLegacy[$mapKey] = $virtualId;
+
+        return [$virtualId, true];
     }
 
     /**
@@ -634,7 +673,15 @@ class LegacySyncCommand extends Command
             return [$newId, true];
         }
 
-        return [0, true];
+        $mapKey = 'registration:' . $legacyRegistrationId;
+        if (isset($this->dryRunEntityByLegacy[$mapKey])) {
+            return [$this->dryRunEntityByLegacy[$mapKey], false];
+        }
+
+        $virtualId = $this->nextDryRunId('registration');
+        $this->dryRunEntityByLegacy[$mapKey] = $virtualId;
+
+        return [$virtualId, true];
     }
 
     private function markMigrated(string $entity, int $legacyId, int $newId, string $legacyTimestamp, array $payload): void
@@ -828,5 +875,14 @@ class LegacySyncCommand extends Command
         }
 
         return false;
+    }
+
+    private function nextDryRunId(string $entity): int
+    {
+        $current = $this->dryRunIdCounters[$entity] ?? 0;
+        $current--;
+        $this->dryRunIdCounters[$entity] = $current;
+
+        return $current;
     }
 }

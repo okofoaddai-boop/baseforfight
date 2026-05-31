@@ -500,8 +500,16 @@ class LegacySyncCommand extends Command
             $clubId = $this->clubByExactName[$exact];
             $this->counts['clubs_reused']++;
 
-            /** @var Club $club */
-            $club = Club::query()->findOrFail($clubId);
+            if ($this->dryRun || $clubId <= 0) {
+                $club = new Club();
+                $club->id = 0;
+                $club->name = $exact;
+                $club->slug = Str::slug($exact) ?: 'club-' . $legacyUserId;
+            } else {
+                /** @var Club $club */
+                $club = Club::query()->findOrFail($clubId);
+            }
+
             $this->markMigrated('club', $legacyUserId, $clubId, (string) ($userData->timestamp ?? ''), [
                 'club_name' => $exact,
                 'reuse' => true,

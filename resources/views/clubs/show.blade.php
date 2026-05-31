@@ -1938,7 +1938,7 @@
                             <div class="row">Noch keine Veranstaltungen vorhanden.</div>
                         @endforelse
                     </div>
-                @elseif ($activeTab === 'club-data' && $isManager)
+                @elseif ($activeTab === 'club-data' && $canManageClub)
                     <h2 class="section-title">Vereinsdaten bearbeiten</h2>
                     <form method="post" action="{{ route('clubs.update', $club) }}">
                         @csrf
@@ -1962,7 +1962,7 @@
                             <button class="btn" type="submit">Vereinsdaten speichern</button>
                         </div>
                     </form>
-                @elseif ($activeTab === 'billing' && $isManager)
+                @elseif ($activeTab === 'billing' && $canManageClub)
                     <h2 class="section-title">Rechnungsdaten bearbeiten</h2>
                     <form method="post" action="{{ route('clubs.update', $club) }}">
                         @csrf

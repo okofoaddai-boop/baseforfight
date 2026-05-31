@@ -9,7 +9,7 @@ return [
     ],
     'footer' => [
         'aria' => 'Footer Navigation',
-        'tagline' => 'Digitale Plattform für Box- und Kampfsport-Events.',
+        'tagline' => 'Less Work. More Sport.',
         'copy' => '© :year BaseForFight. Alle Angaben ohne Gewähr.',
     ],
     'pages' => [
@@ -203,7 +203,7 @@ return [
                 [
                     'title' => 'Kontakt',
                     'body' => [
-                        'E-Mail: info@boxpoint.eu',
+                        'E-Mail: info@baseforfight.de',
                     ],
                 ],
                 [

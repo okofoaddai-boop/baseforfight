@@ -1,3 +1,8 @@
+@php
+    $explainedUrl = \Illuminate\Support\Facades\Route::has('pages.explained') ? route('pages.explained') : url('/bff-leicht-erklaert');
+    $pricingUrl = \Illuminate\Support\Facades\Route::has('pages.pricing') ? route('pages.pricing') : url('/preise');
+@endphp
+
 <nav class="navbar navbar-expand-lg app-navbar sticky-top">
     <div class="app-navbar-shell container-fluid px-3 px-xl-4">
         <a class="navbar-brand d-inline-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}">
@@ -12,13 +17,13 @@
         <div class="collapse navbar-collapse" id="adminNavbar">
             <ul class="navbar-nav me-auto mb-3 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('pages.explained') ? 'active' : '' }}" href="{{ route('pages.explained') }}">
+                    <a class="nav-link {{ request()->routeIs('pages.explained') ? 'active' : '' }}" href="{{ $explainedUrl }}">
                         <i class="bi bi-info-circle"></i>
                         <span>{{ trans('pages.nav.explained') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('pages.pricing') ? 'active' : '' }}" href="{{ route('pages.pricing') }}">
+                    <a class="nav-link {{ request()->routeIs('pages.pricing') ? 'active' : '' }}" href="{{ $pricingUrl }}">
                         <i class="bi bi-tags"></i>
                         <span>{{ trans('pages.nav.pricing') }}</span>
                     </a>

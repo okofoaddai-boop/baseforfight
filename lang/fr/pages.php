@@ -9,7 +9,7 @@ return [
     ],
     'footer' => [
         'aria' => 'Navigation de pied de page',
-        'tagline' => 'Plateforme numérique pour les événements de boxe et sports de combat.',
+        'tagline' => 'Less Work. More Sport.',
         'copy' => '© :year BaseForFight. Informations sans garantie.',
     ],
     'pages' => [

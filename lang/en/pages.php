@@ -9,7 +9,7 @@ return [
     ],
     'footer' => [
         'aria' => 'Footer navigation',
-        'tagline' => 'Digital platform for boxing and combat sports events.',
+        'tagline' => 'Less Work. More Sport.',
         'copy' => '© :year BaseForFight. All information without guarantee.',
     ],
     'pages' => [

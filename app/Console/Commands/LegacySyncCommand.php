@@ -694,12 +694,29 @@ class LegacySyncCommand extends Command
 
         if ($mapped && (int) $mapped->new_id > 0) {
             $newId = (int) $mapped->new_id;
-            if (! $this->dryRun) {
-                $this->target->table($table)->where('id', $newId)->update($payload);
+            $exists = $this->dryRun || $this->target->table($table)->where('id', $newId)->exists();
+
+            if ($exists) {
+                if (! $this->dryRun) {
+                    $this->target->table($table)->where('id', $newId)->update($payload);
+                }
+
+                $this->markMigrated($entity, $legacyId, $newId, $legacyTimestamp, $payload);
+                return [$newId, false];
             }
 
-            $this->markMigrated($entity, $legacyId, $newId, $legacyTimestamp, $payload);
-            return [$newId, false];
+            if (! $this->dryRun) {
+                // Mapping exists but target row was deleted/reset. Force remap via insert path below.
+                $this->legacy->table('bff_sync_map')
+                    ->where('entity', $entity)
+                    ->where('legacy_id', $legacyId)
+                    ->update([
+                        'new_id' => null,
+                        'sync_status' => 'pending',
+                        'note' => 'stale_target_reference',
+                        'last_synced_at' => now(),
+                    ]);
+            }
         }
 
         if (! $this->dryRun) {
@@ -731,12 +748,29 @@ class LegacySyncCommand extends Command
 
         if ($mapped && (int) $mapped->new_id > 0) {
             $newId = (int) $mapped->new_id;
-            if (! $this->dryRun) {
-                $this->target->table('registrations')->where('id', $newId)->update($payload);
+            $exists = $this->dryRun || $this->target->table('registrations')->where('id', $newId)->exists();
+
+            if ($exists) {
+                if (! $this->dryRun) {
+                    $this->target->table('registrations')->where('id', $newId)->update($payload);
+                }
+
+                $this->markMigrated('registration', $legacyRegistrationId, $newId, $legacyTimestamp, $payload);
+                return [$newId, false];
             }
 
-            $this->markMigrated('registration', $legacyRegistrationId, $newId, $legacyTimestamp, $payload);
-            return [$newId, false];
+            if (! $this->dryRun) {
+                // Mapping exists but target row was deleted/reset. Force remap via lookup/insert path below.
+                $this->legacy->table('bff_sync_map')
+                    ->where('entity', 'registration')
+                    ->where('legacy_id', $legacyRegistrationId)
+                    ->update([
+                        'new_id' => null,
+                        'sync_status' => 'pending',
+                        'note' => 'stale_target_reference',
+                        'last_synced_at' => now(),
+                    ]);
+            }
         }
 
         $existing = $this->target->table('registrations')

@@ -541,17 +541,29 @@ class PublicEventController extends Controller
     {
         $eventDate = $event->starts_at?->toDateString();
 
-        $weightEntry = collect((array) ($fighter->boxing_weight_entries ?? []))
+        $allWeightEntries = collect((array) ($fighter->boxing_weight_entries ?? []))
             ->filter(fn ($entry) => is_array($entry) && trim((string) ($entry['date'] ?? '')) !== '')
+            ->sortByDesc(fn ($entry) => (string) ($entry['date'] ?? ''));
+
+        $weightEntry = $allWeightEntries
             ->filter(fn ($entry) => $eventDate === null || (string) ($entry['date'] ?? '') <= $eventDate)
-            ->sortByDesc(fn ($entry) => (string) ($entry['date'] ?? ''))
             ->first();
 
-        $boutEntry = collect((array) ($fighter->boxing_bout_count_entries ?? []))
+        if (! is_array($weightEntry)) {
+            $weightEntry = $allWeightEntries->first();
+        }
+
+        $allBoutEntries = collect((array) ($fighter->boxing_bout_count_entries ?? []))
             ->filter(fn ($entry) => is_array($entry) && trim((string) ($entry['date'] ?? '')) !== '')
+            ->sortByDesc(fn ($entry) => (string) ($entry['date'] ?? ''));
+
+        $boutEntry = $allBoutEntries
             ->filter(fn ($entry) => $eventDate === null || (string) ($entry['date'] ?? '') <= $eventDate)
-            ->sortByDesc(fn ($entry) => (string) ($entry['date'] ?? ''))
             ->first();
+
+        if (! is_array($boutEntry)) {
+            $boutEntry = $allBoutEntries->first();
+        }
 
         $wins = is_array($boutEntry) && is_numeric($boutEntry['wins'] ?? null) ? (int) $boutEntry['wins'] : 0;
         $losses = is_array($boutEntry) && is_numeric($boutEntry['losses'] ?? null) ? (int) $boutEntry['losses'] : 0;

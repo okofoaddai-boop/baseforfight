@@ -78,6 +78,11 @@ class LegacySyncCommand extends Command
     private array $clubByExactName = [];
 
     /**
+     * @var array<string, int>
+     */
+    private array $clubByNormalizedName = [];
+
+    /**
      * @var array<int, object>
      */
     private array $legacyUserData = [];
@@ -172,6 +177,21 @@ class LegacySyncCommand extends Command
 
     private function prepareLegacyLookups(): void
     {
+        $existingClubs = $this->target->table('clubs')->orderBy('id')->get(['id', 'name']);
+        foreach ($existingClubs as $club) {
+            $exact = trim((string) $club->name);
+            $normalized = $this->normalizeClubName($exact);
+            $clubId = (int) $club->id;
+
+            if ($exact !== '' && ! isset($this->clubByExactName[$exact])) {
+                $this->clubByExactName[$exact] = $clubId;
+            }
+
+            if ($normalized !== '' && ! isset($this->clubByNormalizedName[$normalized])) {
+                $this->clubByNormalizedName[$normalized] = $clubId;
+            }
+        }
+
         $userRows = $this->legacy->table('user_daten')
             ->orderByDesc('user_daten_id')
             ->get();
@@ -434,6 +454,7 @@ class LegacySyncCommand extends Command
     private function syncRegistrations(): void
     {
         $rows = $this->legacy->table('einschreibungen')->orderBy('einschreibungen_id')->cursor();
+        $migrationDate = now()->toDateString();
 
         foreach ($rows as $legacyRegistration) {
             $legacyRegistrationId = (int) $legacyRegistration->einschreibungen_id;
@@ -456,16 +477,43 @@ class LegacySyncCommand extends Command
 
             $legacyTs = $this->safeDateTime((string) $legacyRegistration->timestamp) ?? now();
 
+            $wins = (int) $legacyRegistration->siege;
+            $losses = (int) $legacyRegistration->niederlagen;
+            $draws = (int) $legacyRegistration->unentschieden;
+            $total = $wins + $losses + $draws;
+            $weightKg = $this->resolveLegacyRegistrationWeightKg($legacyRegistration);
+            $weightClass = $this->cleanText((string) ($legacyRegistration->gewichtsklasse ?? ''));
+
             $snapshot = [
+                'event_date' => null,
+                'weight' => [
+                    'date' => $migrationDate,
+                    'weight_kg' => $weightKg,
+                ],
+                'record' => [
+                    'date' => $migrationDate,
+                    'total' => $total,
+                    'wins' => $wins,
+                    'losses' => $losses,
+                    'draws' => $draws,
+                ],
+                'classes' => [
+                    'age' => null,
+                    'performance' => $this->cleanText((string) ($legacyRegistration->leistungsklasse ?? '')),
+                    'weight' => $weightClass !== '' ? $weightClass : null,
+                ],
+                'eligible' => true,
+                'summary' => 'Gewicht: ' . ($weightKg !== null ? $weightKg . ' kg' : '-')
+                    . ', Bilanz G/S/N/U: ' . $total . '/' . $wins . '/' . $losses . '/' . $draws,
                 'legacy_registration_id' => $legacyRegistrationId,
                 'legacy_event_id' => $legacyEventId,
                 'legacy_fighter_id' => $legacyFighterId,
                 'legacy_weight' => $legacyRegistration->gewicht,
                 'legacy_weight_class' => $legacyRegistration->gewichtsklasse,
                 'legacy_performance_class' => $legacyRegistration->leistungsklasse,
-                'legacy_wins' => (int) $legacyRegistration->siege,
-                'legacy_losses' => (int) $legacyRegistration->niederlagen,
-                'legacy_draws' => (int) $legacyRegistration->unentschieden,
+                'legacy_wins' => $wins,
+                'legacy_losses' => $losses,
+                'legacy_draws' => $draws,
             ];
 
             $payload = [
@@ -557,6 +605,32 @@ class LegacySyncCommand extends Command
         }
 
         $normalized = $this->normalizeClubName($exact);
+        if ($normalized !== '' && isset($this->clubByNormalizedName[$normalized])) {
+            $clubId = $this->clubByNormalizedName[$normalized];
+            $this->counts['clubs_reused']++;
+
+            if ($this->dryRun || $clubId <= 0) {
+                $club = new Club();
+                $club->id = $clubId;
+                $club->name = $exact;
+                $club->slug = Str::slug($exact) ?: 'club-' . $legacyUserId;
+            } else {
+                /** @var Club $club */
+                $club = Club::query()->findOrFail($clubId);
+            }
+
+            if ($exact !== '' && ! isset($this->clubByExactName[$exact])) {
+                $this->clubByExactName[$exact] = $clubId;
+            }
+
+            $this->markMigrated('club', $legacyUserId, $clubId, (string) ($userData->timestamp ?? ''), [
+                'club_name' => $exact,
+                'reuse' => true,
+            ]);
+
+            return $club;
+        }
+
         $directory = $normalized !== '' ? ($this->legacyClubDirectory[$normalized] ?? null) : null;
 
         $baseSlug = Str::slug($exact);
@@ -595,6 +669,9 @@ class LegacySyncCommand extends Command
         }
 
         $this->clubByExactName[$exact] = (int) $club->getKey();
+        if ($normalized !== '') {
+            $this->clubByNormalizedName[$normalized] = (int) $club->getKey();
+        }
         $this->counts['clubs_created']++;
         $this->markMigrated('club', $legacyUserId, (int) $club->getKey(), (string) ($userData->timestamp ?? ''), [
             'club_name' => $exact,
@@ -833,6 +910,16 @@ class LegacySyncCommand extends Command
         }
 
         return $this->parseWeightClassValue($legacyFighter->gewichtsklasse ?? null);
+    }
+
+    private function resolveLegacyRegistrationWeightKg(object $legacyRegistration): ?float
+    {
+        $directWeight = $this->parseWeightValue($legacyRegistration->gewicht ?? null);
+        if ($directWeight !== null) {
+            return $directWeight;
+        }
+
+        return $this->parseWeightClassValue($legacyRegistration->gewichtsklasse ?? null);
     }
 
     private function parseWeightValue(mixed $value): ?float

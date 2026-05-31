@@ -303,6 +303,8 @@ class LegacySyncCommand extends Command
             ->orderBy('kaempfer_id')
             ->cursor();
 
+        $migrationDate = now()->toDateString();
+
         foreach ($rows as $legacyFighter) {
             $legacyFighterId = (int) $legacyFighter->kaempfer_id;
             $legacyOwnerId = (int) $legacyFighter->user_id;
@@ -316,6 +318,8 @@ class LegacySyncCommand extends Command
                 continue;
             }
 
+            $derivedWeightKg = $this->resolveLegacyFighterWeightKg($legacyFighter);
+
             $payload = [
                 'club_id' => $clubId,
                 'created_by_user_id' => $createdBy,
@@ -326,14 +330,19 @@ class LegacySyncCommand extends Command
                 'weight_class' => (string) $legacyFighter->gewichtsklasse,
                 'sport_modules' => json_encode(['boxing'], JSON_THROW_ON_ERROR),
                 'boxing_weight_entries' => json_encode([
-                    ['weight' => (float) ($legacyFighter->gewichtsklasse ?? 0), 'source' => 'legacy'],
+                    [
+                        'date' => $migrationDate,
+                        'weight_kg' => $derivedWeightKg,
+                        'source' => 'legacy_sync',
+                    ],
                 ], JSON_THROW_ON_ERROR),
                 'boxing_bout_count_entries' => json_encode([
                     [
+                        'date' => $migrationDate,
                         'wins' => (int) $legacyFighter->siege,
                         'losses' => (int) $legacyFighter->niederlagen,
                         'draws' => (int) $legacyFighter->unentschieden,
-                        'source' => 'legacy',
+                        'source' => 'legacy_sync',
                     ],
                 ], JSON_THROW_ON_ERROR),
                 'status' => 'active',
@@ -814,6 +823,64 @@ class LegacySyncCommand extends Command
         }
 
         return null;
+    }
+
+    private function resolveLegacyFighterWeightKg(object $legacyFighter): ?float
+    {
+        $directWeight = $this->parseWeightValue($legacyFighter->gewicht ?? null);
+        if ($directWeight !== null) {
+            return $directWeight;
+        }
+
+        return $this->parseWeightClassValue($legacyFighter->gewichtsklasse ?? null);
+    }
+
+    private function parseWeightValue(mixed $value): ?float
+    {
+        if (is_numeric($value)) {
+            $weight = (float) $value;
+            return $weight > 0 ? $weight : null;
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = str_replace(',', '.', trim($value));
+        if ($normalized === '' || ! is_numeric($normalized)) {
+            return null;
+        }
+
+        $weight = (float) $normalized;
+        return $weight > 0 ? $weight : null;
+    }
+
+    private function parseWeightClassValue(mixed $value): ?float
+    {
+        if (is_numeric($value)) {
+            $weight = (float) $value;
+            return $weight > 0 ? $weight : null;
+        }
+
+        $raw = is_string($value) ? trim($value) : '';
+        if ($raw === '') {
+            return null;
+        }
+
+        if (! preg_match('/(\d+(?:[\.,]\d+)?)/u', $raw, $matches)) {
+            return null;
+        }
+
+        $weight = (float) str_replace(',', '.', $matches[1]);
+        if ($weight <= 0) {
+            return null;
+        }
+
+        if (preg_match('/^\s*(?:Ü|ü|UE|ue|Ue|uE|>|ab|over)\s*/u', $raw) === 1) {
+            return $weight + 1.0;
+        }
+
+        return $weight;
     }
 
     private function safeDateTime(string $value): ?Carbon

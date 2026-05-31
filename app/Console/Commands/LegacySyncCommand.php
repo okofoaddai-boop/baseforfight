@@ -13,6 +13,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 class LegacySyncCommand extends Command
@@ -129,6 +130,7 @@ class LegacySyncCommand extends Command
         $this->line($this->dryRun ? 'Legacy sync dry-run started.' : 'Legacy sync started.');
 
         try {
+            $this->validateLegacySchema();
             $this->prepareLegacyLookups();
 
             if (! $this->dryRun) {
@@ -225,6 +227,37 @@ class LegacySyncCommand extends Command
             $this->legacyEventDocs[$eventId] ??= [];
             $this->legacyEventDocs[$eventId][] = Storage::disk('public')->url('legacy/veranstaltungen_pdf/' . $fileName);
         }
+    }
+
+    private function validateLegacySchema(): void
+    {
+        $requiredTables = [
+            'user',
+            'user_daten',
+            'vereine_maps',
+            'kaempfer',
+            'veranstaltungen',
+            'einschreibungen',
+        ];
+
+        $missingTables = [];
+        foreach ($requiredTables as $table) {
+            if (! $this->legacy->getSchemaBuilder()->hasTable($table)) {
+                $missingTables[] = $table;
+            }
+        }
+
+        if ($missingTables === []) {
+            return;
+        }
+
+        $databaseName = (string) ($this->legacy->getDatabaseName() ?? 'unknown');
+
+        throw new RuntimeException(
+            'Legacy schema incomplete on connection "legacy" (database: ' . $databaseName . '). '
+            . 'Missing table(s): ' . implode(', ', $missingTables)
+            . '. Check LEGACY_DB_* values in .env and run "php artisan optimize:clear" before retrying.'
+        );
     }
 
     private function syncUsersAndClubs(ClubPermissionService $clubPermissionService, int $limitUsers): void

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\BoxSettingsController;
 use App\Http\Controllers\Admin\ClubManagementController;
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\LegacyMigrationController;
 use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegistrationController;
@@ -80,6 +81,8 @@ Route::post('/admin/impersonation/stop', [ImpersonationController::class, 'stop'
 Route::prefix('admin')->group(function (): void {
     Route::middleware(['auth', 'superadmin.access'])->group(function (): void {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+        Route::post('/legacy-sync/dry-run', [LegacyMigrationController::class, 'dryRun'])->name('admin.legacy-sync.dry-run');
+        Route::post('/legacy-sync/run', [LegacyMigrationController::class, 'migrate'])->name('admin.legacy-sync.run');
         Route::post('/impersonate/{user}', [ImpersonationController::class, 'switchTo'])->name('admin.impersonate.switch');
         Route::post('/impersonate/club/{club:slug}/{role}', [ImpersonationController::class, 'switchToClubRole'])->name('admin.impersonate.club-role');
         Route::get('/modules', [ModuleController::class, 'index'])->name('admin.modules.index');

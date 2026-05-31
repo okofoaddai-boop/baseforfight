@@ -184,6 +184,14 @@
 @endpush
 
 @section('content')
+    @if (session('status'))
+        <div class="card" style="margin-bottom:16px; border-color:#7db928; background:#eff7ea;">{{ session('status') }}</div>
+    @endif
+
+    @if ($errors->has('legacy_sync'))
+        <div class="card" style="margin-bottom:16px; border-color:#dd6850; background:#fff2ef; color:#5b1f12;">{{ $errors->first('legacy_sync') }}</div>
+    @endif
+
     <div class="header">
         <div>
             <h1>{{ __('Operations Dashboard') }}</h1>
@@ -215,6 +223,23 @@
 
     <section class="layout">
         <div class="card">
+            @if ($isSuperAdmin)
+                <div class="card" style="margin-bottom:14px; border-color:#c6d8c0; background:#f7fbf4;">
+                    <h2 class="section-title" style="margin-bottom:8px;">Legacy-Migration</h2>
+                    <p class="hint" style="margin-bottom:10px;">Zuerst Dry-Run ausfuehren, dann produktiven Lauf starten.</p>
+                    <div class="actions">
+                        <form method="post" action="{{ route('admin.legacy-sync.dry-run') }}">
+                            @csrf
+                            <button class="logout" type="submit" style="background:#016734;">Dry-Run starten</button>
+                        </form>
+                        <form method="post" action="{{ route('admin.legacy-sync.run') }}" onsubmit="return confirm('Produktive Legacy-Migration jetzt starten?');">
+                            @csrf
+                            <button class="logout" type="submit" style="background:#7db928; color:#133118;">Migration starten</button>
+                        </form>
+                    </div>
+                </div>
+            @endif
+
             <h2 class="section-title">{{ __('Endpoint Navigator') }}</h2>
             @foreach ($endpointGroups as $group => $endpoints)
                 <div class="endpoint-group">

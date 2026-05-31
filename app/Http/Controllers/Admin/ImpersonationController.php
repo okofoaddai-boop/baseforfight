@@ -76,6 +76,6 @@ class ImpersonationController extends Controller
         Auth::loginUsingId((int) $impersonatorId);
         $request->session()->regenerate();
 
-        return redirect()->route('admin.dashboard')->with('status', 'Zur Superuser-Ansicht zurueckgekehrt.');
+        return redirect()->route('admin.dashboard')->with('status', 'Zur Superuser-Ansicht zurückgekehrt.');
     }
 }

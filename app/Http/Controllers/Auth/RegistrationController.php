@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Club;
-use App\Models\ClubJoinRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,60 +23,28 @@ class RegistrationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'club_name' => ['required', 'string', 'min:2', 'max:255'],
+            'first_name' => ['required', 'string', 'min:2', 'max:120'],
+            'last_name'  => ['required', 'string', 'min:2', 'max:120'],
+            'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'   => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'email.unique' => __('Diese E-Mail-Adresse ist bereits registriert.'),
         ]);
 
-        $clubName = trim($validated['club_name']);
-        $clubSlug = Str::slug($clubName);
-
-        if ($clubSlug === '') {
-            return back()->withInput()->withErrors([
-                'club_name' => 'Der Vereinsname ist ungueltig.',
-            ]);
-        }
+        $firstName = trim((string) $validated['first_name']);
+        $lastName  = trim((string) $validated['last_name']);
+        $fullName  = trim($firstName . ' ' . $lastName);
 
         $user = User::query()->create([
-            'name' => $validated['name'],
-            'email' => Str::lower($validated['email']),
-            'password' => Hash::make($validated['password']),
+            'name'                     => $fullName,
+            'first_name'               => $firstName,
+            'last_name'                => $lastName,
+            'email'                    => Str::lower($validated['email']),
+            'password'                 => Hash::make($validated['password']),
             'email_verification_token' => Str::random(64),
-            'is_admin_support' => false,
-            'is_super_admin' => false,
+            'is_admin_support'         => false,
+            'is_super_admin'           => false,
         ]);
-
-        $matchedClub = Club::query()->where('slug', $clubSlug)->first();
-
-        if (! $matchedClub) {
-            $matchedClub = $this->findLikelyClubMatch($clubName);
-        }
-
-        $createdManagerClub = false;
-
-        if ($matchedClub) {
-            ClubJoinRequest::query()->create([
-                'club_id' => $matchedClub->getKey(),
-                'user_id' => $user->getKey(),
-                'requested_club_name' => $clubName,
-                'requested_club_slug' => $clubSlug,
-                'status' => 'pending',
-            ]);
-        } else {
-            $club = Club::query()->create([
-                'name' => $clubName,
-                'slug' => $clubSlug . '-' . Str::lower(Str::random(4)),
-                'created_by_user_id' => $user->getKey(),
-            ]);
-
-            $club->users()->attach($user->getKey(), [
-                'role' => 'manager',
-                'joined_at' => now(),
-            ]);
-
-            $createdManagerClub = true;
-        }
 
         $verificationUrl = route('register.verify-email', [
             'token' => $user->getAttribute('email_verification_token'),
@@ -88,30 +54,31 @@ class RegistrationController extends Controller
 
         try {
             Mail::raw(
-                "Bitte bestaetige deine Registrierung bei BaseForFight:\n\n{$verificationUrl}",
+                __('Hallo :name,', ['name' => $firstName]) . "\n\n"
+                . __('Bitte bestätige deine Registrierung bei BaseForFight:') . "\n\n"
+                . $verificationUrl . "\n\n"
+                . __('Nach der Bestätigung kannst du dich einloggen und unter "Meine Vereine" einem Verein beitreten oder einen neuen Verein anlegen.'),
                 static function ($message) use ($user): void {
                     $message->to((string) $user->getAttribute('email'))
-                        ->subject('BaseForFight: Bitte E-Mail bestaetigen');
+                        ->subject(__('BaseForFight: Bitte E-Mail bestätigen'));
                 }
             );
         } catch (Throwable $exception) {
             $mailError = true;
             Log::warning('Registration verification mail could not be sent.', [
                 'user_id' => $user->getKey(),
-                'email' => $user->getAttribute('email'),
-                'error' => $exception->getMessage(),
+                'email'   => $user->getAttribute('email'),
+                'error'   => $exception->getMessage(),
             ]);
         }
 
-        $status = $createdManagerClub
-            ? 'Registrierung erfolgreich. Bitte bestaetige deine E-Mail. Dein Verein wurde neu angelegt und du bist als Manager vorgemerkt.'
-            : 'Registrierung erfolgreich. Bitte bestaetige deine E-Mail. Die Vereinsanfrage wurde an das Manager-Team weitergeleitet.';
+        $status = __('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse, um dich einloggen zu koennen.');
 
         if ($mailError) {
-            $status .= ' Hinweis: E-Mail-Versand war lokal nicht erreichbar. Bitte Mail-Konfiguration pruefen.';
+            $status .= ' ' . __('Hinweis: E-Mail-Versand war lokal nicht erreichbar. Bitte Mail-Konfiguration prüfen.');
         }
 
-        return redirect()->route('register')->with('status', $status);
+        return redirect()->route('login')->with('status', $status);
     }
 
     public function verifyEmail(string $token): RedirectResponse
@@ -122,35 +89,76 @@ class RegistrationController extends Controller
 
         if (! $user) {
             return redirect()->route('register')->withErrors([
-                'email' => 'Der Verifizierungslink ist ungueltig oder abgelaufen.',
+                'email' => __('Der Verifizierungslink ist ungültig oder abgelaufen.'),
             ]);
         }
 
-        $user->update([
-            'email_verified_at' => now(),
+        $user->forceFill([
+            'email_verified_at'        => now(),
             'email_verification_token' => null,
+        ])->save();
+
+        return redirect()->route('login')->with('status', __('E-Mail bestätigt. Du kannst dich jetzt einloggen und unter "Meine Vereine" einem Verein beitreten.'));
+    }
+
+    public function resendVerificationMail(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
         ]);
 
-        return redirect()->route('login')->with('status', 'E-Mail bestaetigt. Du kannst dich jetzt einloggen.');
-    }
+        $email = Str::lower((string) $validated['email']);
+        $user = User::query()->where('email', $email)->first();
 
-    private function findLikelyClubMatch(string $clubName): ?Club
-    {
-        $needle = Str::lower(trim($clubName));
-        $clubs = Club::query()->select(['id', 'name', 'slug'])->get();
-
-        foreach ($clubs as $club) {
-            $candidate = Str::lower((string) $club->getAttribute('name'));
-
-            if ($candidate === $needle || levenshtein($needle, $candidate) <= 2) {
-                return $club;
-            }
-
-            if (str_contains($candidate, $needle) || str_contains($needle, $candidate)) {
-                return $club;
-            }
+        if (! $user) {
+            return redirect()->route('register')->with('status', __('Wenn ein passendes Konto existiert, wurde eine neue Verifizierungs-E-Mail versendet.'));
         }
 
-        return null;
+        if ($user->email_verified_at) {
+            return redirect()->route('login')->with('status', __('Diese E-Mail-Adresse ist bereits bestätigt. Du kannst dich einloggen.'));
+        }
+
+        if (! $user->email_verification_token) {
+            $user->forceFill([
+                'email_verification_token' => Str::random(64),
+            ])->save();
+        }
+
+        $firstName = trim((string) ($user->first_name ?: $user->name ?: ''));
+        $verificationUrl = route('register.verify-email', [
+            'token' => $user->getAttribute('email_verification_token'),
+        ]);
+
+        $mailError = false;
+
+        try {
+            Mail::raw(
+                __('Hallo :name,', ['name' => $firstName]) . "\n\n"
+                . __('Bitte bestätige deine Registrierung bei BaseForFight:') . "\n\n"
+                . $verificationUrl . "\n\n"
+                . __('Nach der Bestätigung kannst du dich einloggen und unter "Meine Vereine" einem Verein beitreten oder einen neuen Verein anlegen.'),
+                static function ($message) use ($user): void {
+                    $message->to((string) $user->getAttribute('email'))
+                        ->subject(__('BaseForFight: Bitte E-Mail bestätigen'));
+                }
+            );
+        } catch (Throwable $exception) {
+            $mailError = true;
+            Log::warning('Resend verification mail failed.', [
+                'user_id' => $user->getKey(),
+                'email'   => $user->getAttribute('email'),
+                'error'   => $exception->getMessage(),
+            ]);
+        }
+
+        $status = $mailError
+            ? __('Die Verifizierungs-E-Mail konnte nicht gesendet werden. Bitte prüfe die Mail-Konfiguration.')
+            : __('Neue Verifizierungs-E-Mail wurde versendet.');
+
+        return redirect()->route('register')->with('status', $status)->withInput([
+            'email' => $email,
+        ]);
     }
 }
+
+

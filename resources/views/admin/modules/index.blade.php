@@ -6,7 +6,7 @@
     <div class="header">
         <div>
             <h1>Module</h1>
-            <div style="color:var(--ink-soft);">Aktiviere oder deaktiviere Fachmodule fuer die Plattform.</div>
+            <div style="color:var(--ink-soft);">Aktiviere oder deaktiviere Fachmodule für die Plattform.</div>
         </div>
     </div>
 
@@ -124,9 +124,9 @@
                                 }
 
                                 if (provider === 'google') {
-                                    baseUrlHint.textContent = 'Empfehlung fuer Google: Base URL leer lassen. Die API-Version wird dann passend zum Modell automatisch versucht.';
+                                    baseUrlHint.textContent = 'Empfehlung für Google: Base URL leer lassen. Die API-Version wird dann passend zum Modell automatisch versucht.';
                                 } else if (provider === 'copilot') {
-                                    baseUrlHint.textContent = 'Fuer Copilot ist eine OpenAI-kompatible Base URL erforderlich.';
+                                    baseUrlHint.textContent = 'Für Copilot ist eine OpenAI-kompatible Base URL erforderlich.';
                                 } else {
                                     baseUrlHint.textContent = 'Leer nutzt die Standard-URL des Providers.';
                                 }

@@ -18,8 +18,10 @@ class Event extends Model
         'starts_at',
         'ends_at',
         'registration_deadline',
+        'registration_approval_mode',
         'max_registrations',
         'allow_waitlist',
+        'billing_locked_at',
         'entry_fee_cents',
         'currency',
         'info_documents',
@@ -41,12 +43,15 @@ class Event extends Model
         'created_by_user_id',
         'cancelled_at',
         'cancel_reason',
+        'is_demo',
+        'demo_batch',
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'registration_deadline' => 'datetime',
+        'billing_locked_at' => 'datetime',
         'max_registrations' => 'integer',
         'allow_waitlist' => 'boolean',
         'entry_fee_cents' => 'integer',
@@ -56,6 +61,7 @@ class Event extends Model
         'boxing_performance_classes' => 'array',
         'published_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'is_demo' => 'boolean',
     ];
 
     public function organizerClub(): BelongsTo

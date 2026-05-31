@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="de">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $event->title }} | {{ config('brand.name') }}</title>
+    @include('partials.app-assets')
     <style>
         :root {
             --bg: #f4f6f2;
@@ -19,19 +20,9 @@
 
         * { box-sizing: border-box; }
 
-        body {
-            margin: 0;
-            background:
-                radial-gradient(circle at 10% 8%, rgba(125, 185, 40, 0.16), transparent 30%),
-                radial-gradient(circle at 88% 20%, rgba(1, 103, 52, 0.1), transparent 28%),
-                var(--bg);
-            color: var(--ink);
-            font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
-        }
-
         .wrap {
-            width: min(1100px, calc(100% - 24px));
-            margin: 18px auto 24px;
+            width: min(1480px, calc(100% - 24px));
+            margin: 0 auto 24px;
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: 20px;
@@ -329,27 +320,181 @@
             justify-content: flex-end;
         }
 
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border: 1px solid var(--line);
+            background: #f5f8f2;
+        }
+
+        .status-badge.active {
+            background: #e8f6eb;
+            border-color: #9cc9aa;
+            color: var(--green);
+        }
+
+        .status-badge.waiting {
+            background: #fff7df;
+            border-color: #e0c36f;
+            color: #9b6900;
+        }
+
+        .status-badge.withdrawn {
+            background: #fff0ed;
+            border-color: #e2a29a;
+            color: #9f3927;
+        }
+
+        .registration-note {
+            margin-top: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f7faf5;
+            padding: 12px 14px;
+            color: var(--ink-soft);
+        }
+
+        .registration-note strong {
+            color: var(--ink);
+        }
+
+        .panel-stack {
+            display: grid;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .management-shell {
+            display: grid;
+            gap: 14px;
+        }
+
+        .management-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .kpi-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel-soft);
+            padding: 12px;
+        }
+
+        .kpi-card strong {
+            display: block;
+            font-size: 1.3rem;
+            margin-top: 6px;
+        }
+
+        .management-topline {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .group-card {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .registration-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 820px;
+        }
+
+        .registration-table th,
+        .registration-table td {
+            border-top: 1px solid var(--line);
+            padding: 10px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .registration-table thead th {
+            border-top: 0;
+            color: var(--ink-soft);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .table-actions select {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 8px 12px;
+            background: #fff;
+            color: var(--ink);
+        }
+
+        .billable-flag {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.25rem 0.65rem;
+            background: #eef7e9;
+            border: 1px solid #a6c7a1;
+            color: var(--green);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
         @media (max-width: 900px) {
             .top { grid-template-columns: 1fr; }
             .split { grid-template-columns: 1fr; }
             .fighter-class-grid { grid-template-columns: 1fr; }
             .class-grid { grid-template-columns: 1fr; }
+            .management-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
     </style>
 </head>
-<body>
+<body class="app-shell">
+    @include('partials.main-navbar')
+
     <div class="wrap">
         @if (session()->has('impersonator_id'))
             <section style="margin-bottom:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#eef7e9; display:flex; justify-content:space-between; gap:10px; align-items:center;">
                 <strong style="font-size:0.92rem;">Support-Simulation aktiv</strong>
                 <form method="post" action="{{ route('admin.impersonation.stop') }}">
                     @csrf
-                    <button class="btn" type="submit">Zurueck zum Superadmin-Dashboard</button>
+                    <button class="btn" type="submit">Zurück zum Superadmin-Dashboard</button>
                 </form>
             </section>
         @endif
 
-        <a href="{{ route('welcome') }}" style="color:var(--green); text-decoration:none; font-weight:700;">Zurueck zur Uebersicht</a>
+        <a href="{{ route('welcome') }}" style="color:var(--green); text-decoration:none; font-weight:700;">Zurück zur Übersicht</a>
 
         @if (session('status'))
             <div class="status">{{ session('status') }}</div>
@@ -367,16 +512,17 @@
 
         <section class="top" style="margin-top:10px;">
             <div class="calendar-sheet" aria-label="Kalenderdatum">
-                <div class="month">{{ $event->starts_at->locale('de')->translatedFormat('M') }}</div>
+                <div class="month">{{ $event->starts_at->locale(app()->getLocale())->translatedFormat('M') }}</div>
                 <div class="day">{{ $event->starts_at->format('d') }}</div>
                 <div class="time">{{ $event->starts_at->format('H:i') }} Uhr</div>
             </div>
             <div>
                 <h1>{{ $event->title }}</h1>
-                <div class="meta-line">Los geht's am {{ $event->starts_at->locale('de')->translatedFormat('l, d.m.Y \u\m H:i') }}.</div>
+                <div class="meta-line">Los geht's am {{ $event->starts_at->locale(app()->getLocale())->translatedFormat('l, d.m.Y \u\m H:i') }}.</div>
                 @if ($event->registration_deadline)
-                    <div class="meta-line">Meldeschluss: {{ $event->registration_deadline->locale('de')->translatedFormat('d.m.Y \u\m H:i') }}</div>
+                    <div class="meta-line">Meldeschluss: {{ $event->registration_deadline->locale(app()->getLocale())->translatedFormat('d.m.Y \u\m H:i') }}</div>
                 @endif
+                <div class="meta-line">Meldungen: {{ ($event->registration_approval_mode ?? 'auto') === 'manual' ? 'erst nach Freigabe gültig' : 'sofort gültig' }}</div>
                 @if (! empty($event->location) || ! empty($event->venue_name))
                     <div class="meta-line">{{ $event->location ?: 'Ort folgt' }} @if($event->venue_name) · {{ $event->venue_name }} @endif</div>
                 @endif
@@ -388,6 +534,9 @@
                 @endif
                 @if (! empty($displayStatus))
                     <span class="badge">{{ strtoupper($displayStatus) }}</span>
+                @endif
+                @if ($isDeadlinePassed)
+                    <div class="meta-line">Aktive Meldungen ab Meldeschluss bleiben abrechnungsrelevant. Spätere Aktivierungen erhöhen die Abrechnungszahl zusätzlich.</div>
                 @endif
             </div>
         </section>
@@ -465,7 +614,7 @@
         <nav class="tabs" role="tablist" aria-label="Veranstaltungsreiter">
             <a id="event-tab-details" role="tab" aria-selected="{{ $activeTab === 'details' ? 'true' : 'false' }}" aria-controls="event-panel-details" tabindex="{{ $activeTab === 'details' ? '0' : '-1' }}" class="tab-link {{ $activeTab === 'details' ? 'active' : '' }}" href="{{ route('events.show', ['event' => $event, 'tab' => 'details']) }}">Details</a>
             <a id="event-tab-registrations" role="tab" aria-selected="{{ $activeTab === 'registrations' ? 'true' : 'false' }}" aria-controls="event-panel-registrations" tabindex="{{ $activeTab === 'registrations' ? '0' : '-1' }}" class="tab-link {{ $activeTab === 'registrations' ? 'active' : '' }}" href="{{ route('events.show', ['event' => $event, 'tab' => 'registrations']) }}">Meldungen</a>
-            <a id="event-tab-classes" role="tab" aria-selected="{{ $activeTab === 'classes' ? 'true' : 'false' }}" aria-controls="event-panel-classes" tabindex="{{ $activeTab === 'classes' ? '0' : '-1' }}" class="tab-link {{ $activeTab === 'classes' ? 'active' : '' }}" href="{{ route('events.show', ['event' => $event, 'tab' => 'classes']) }}">Klassenuebersicht</a>
+            <a id="event-tab-classes" role="tab" aria-selected="{{ $activeTab === 'classes' ? 'true' : 'false' }}" aria-controls="event-panel-classes" tabindex="{{ $activeTab === 'classes' ? '0' : '-1' }}" class="tab-link {{ $activeTab === 'classes' ? 'active' : '' }}" href="{{ route('events.show', ['event' => $event, 'tab' => 'classes']) }}">Klassenübersicht</a>
         </nav>
 
         @if ($activeTab === 'details')
@@ -473,7 +622,7 @@
                 @if (! empty($event->description))
                     <p style="margin:0; line-height:1.6;">{{ $event->description }}</p>
                 @else
-                    <div class="meta-line" style="margin-top:0;">Keine ausfuehrliche Beschreibung hinterlegt.</div>
+                    <div class="meta-line" style="margin-top:0;">Keine ausführliche Beschreibung hinterlegt.</div>
                 @endif
 
                 @if (count($docs) > 0)
@@ -487,7 +636,7 @@
                                     title="Dokument {{ $loop->iteration }}"
                                     loading="lazy"
                                 ></iframe>
-                                <a href="{{ route('events.documents.show', ['event' => $event, 'documentIndex' => $loop->index]) }}" target="_blank" rel="noopener">In neuem Tab oeffnen</a>
+                                <a href="{{ route('events.documents.show', ['event' => $event, 'documentIndex' => $loop->index]) }}" target="_blank" rel="noopener">In neuem Tab öffnen</a>
                             </article>
                         @endforeach
                     </div>
@@ -498,7 +647,7 @@
         @if ($activeTab === 'classes')
             <section id="event-panel-classes" class="tab-panel" role="tabpanel" aria-labelledby="event-tab-classes">
                 <h2 style="margin:0 0 8px;">Zugelassene Klassen dieser Veranstaltung</h2>
-                <div class="meta-line" style="margin-top:0;">Diese Uebersicht basiert auf den im Event ausgewaehlten Alters- und Leistungsklassen sowie dem aktiven Regelpaket.</div>
+                <div class="meta-line" style="margin-top:0;">Diese Übersicht basiert auf den im Event ausgewählten Alters- und Leistungsklassen sowie dem aktiven Regelpaket.</div>
 
                 @php
                     $sortedAgeClasses = $visibleAgeClasses
@@ -586,7 +735,7 @@
                     <article class="class-card" id="weight-classes-card" role="tabpanel" aria-labelledby="{{ count($ageRows) > 0 ? 'age-tab-' . $ageRows[0]['code'] : '' }}">
                         <h3>Gewichtsklassen</h3>
                         @if (count($ageRows) === 0)
-                            <div class="meta-line" style="margin-top:0;">Keine Gewichtsklassen verfuegbar.</div>
+                            <div class="meta-line" style="margin-top:0;">Keine Gewichtsklassen verfügbar.</div>
                         @else
                             <div class="meta-line" id="selected-age-label" style="margin-top:0;"></div>
                             <ul class="class-list" id="weight-classes-list" style="margin-top:6px;"></ul>
@@ -598,116 +747,168 @@
 
         @if ($activeTab === 'registrations')
         @auth
+            @php
+                $statusLabels = [
+                    \App\Models\Registration::STATUS_ACTIVE => 'Teilnahme',
+                    \App\Models\Registration::STATUS_WAITING => 'Wartend',
+                    \App\Models\Registration::STATUS_WITHDRAWN => 'Zurückgezogen',
+                ];
+            @endphp
             <section id="event-panel-registrations" class="registration-panel" role="tabpanel" aria-labelledby="event-tab-registrations">
-                <h2 style="margin:0;">Meldung deiner Kaempfer</h2>
-                @if ($isRegistrationOpen)
-                    <div class="meta-line" style="margin-top:4px;">Links schon gemeldet, rechts noch moeglich. Ein Klick verschiebt den Kaempfer, unten dann einmal bestaetigen.</div>
-                @else
-                    <div class="meta-line" style="margin-top:4px;">Meldeschluss ist rum, deswegen zeigen wir dir nur die final gemeldeten Kaempfer.</div>
-                @endif
+                <h2 style="margin:0;">Meldungen</h2>
 
-                @if ($isRegistrationOpen)
-                    <form method="post" action="{{ route('events.registrations.sync', $event) }}" id="registration-sync-form">
-                        @csrf
-                        <div class="split">
-                            <div class="col">
-                                <h3>Gemeldet</h3>
-                                <div id="registered-list">
-                                    @foreach (($registeredFighters ?? collect()) as $fighter)
-                                        @php
-                                            $fighterId = (int) $fighter->getKey();
-                                            $snapshot = (array) ($fighterSnapshots[$fighterId] ?? []);
-                                            $classes = (array) ($snapshot['classes'] ?? []);
-                                            $record = (array) ($snapshot['record'] ?? []);
-                                        @endphp
-                                        <article class="fighter-item" data-fighter-id="{{ $fighterId }}" data-is-registered="1">
-                                            <input type="hidden" name="fighter_ids[]" value="{{ $fighterId }}">
-                                            <div class="fighter-row">
-                                                <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
-                                                <button class="btn btn-switch" type="button" data-switch-fighter>Raus</button>
-                                            </div>
-                                            <div class="fighter-meta">Bilanz G/S/N/U: {{ $record['total'] ?? 0 }}/{{ $record['wins'] ?? 0 }}/{{ $record['losses'] ?? 0 }}/{{ $record['draws'] ?? 0 }}</div>
-                                            <div class="fighter-meta">Gewicht: {{ $snapshot['weight']['weight_kg'] ?? '-' }} kg</div>
-                                            <div class="fighter-class-grid">
-                                                <div class="fighter-class"><strong>Altersklasse</strong>{{ $classes['age'] ?? '-' }}</div>
-                                                <div class="fighter-class"><strong>Leistung</strong>{{ $classes['performance'] ?? '-' }}</div>
-                                                <div class="fighter-class"><strong>Gewicht</strong>{{ $classes['weight'] ?? '-' }}</div>
-                                            </div>
-                                            <div class="fighter-row">
-                                                <span class="fighter-meta">{{ $fighter->club?->name ?? '-' }}</span>
-                                                <a class="btn" href="{{ route('clubs.show', ['club' => $fighter->club?->slug, 'tab' => 'fighters', 'edit_fighter' => $fighterId, 'return_event' => $event->getKey()]) }}">Bearbeiten</a>
-                                            </div>
-                                        </article>
-                                    @endforeach
-                                </div>
-                            </div>
-
-                            <div class="col">
-                                <h3>Noch moeglich</h3>
-                                <div id="possible-list">
-                                    @foreach (($possibleFighters ?? collect()) as $fighter)
-                                        @php
-                                            $fighterId = (int) $fighter->getKey();
-                                            $snapshot = (array) ($fighterSnapshots[$fighterId] ?? []);
-                                            $classes = (array) ($snapshot['classes'] ?? []);
-                                            $record = (array) ($snapshot['record'] ?? []);
-                                        @endphp
-                                        <article class="fighter-item" data-fighter-id="{{ $fighterId }}" data-is-registered="0">
-                                            <input type="hidden" name="fighter_ids[]" value="{{ $fighterId }}" disabled>
-                                            <div class="fighter-row">
-                                                <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
-                                                <button class="btn btn-switch" type="button" data-switch-fighter>Rein</button>
-                                            </div>
-                                            <div class="fighter-meta">Bilanz G/S/N/U: {{ $record['total'] ?? 0 }}/{{ $record['wins'] ?? 0 }}/{{ $record['losses'] ?? 0 }}/{{ $record['draws'] ?? 0 }}</div>
-                                            <div class="fighter-meta">Gewicht: {{ $snapshot['weight']['weight_kg'] ?? '-' }} kg</div>
-                                            <div class="fighter-class-grid">
-                                                <div class="fighter-class"><strong>Altersklasse</strong>{{ $classes['age'] ?? '-' }}</div>
-                                                <div class="fighter-class"><strong>Leistung</strong>{{ $classes['performance'] ?? '-' }}</div>
-                                                <div class="fighter-class"><strong>Gewicht</strong>{{ $classes['weight'] ?? '-' }}</div>
-                                            </div>
-                                            <div class="fighter-row">
-                                                <span class="fighter-meta">{{ $fighter->club?->name ?? '-' }}</span>
-                                                <a class="btn" href="{{ route('clubs.show', ['club' => $fighter->club?->slug, 'tab' => 'fighters', 'edit_fighter' => $fighterId, 'return_event' => $event->getKey()]) }}">Bearbeiten</a>
-                                            </div>
-                                        </article>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="controls">
-                            <button class="btn btn-primary" type="submit">Bestaetigen</button>
-                        </div>
-                    </form>
-                @else
-                    <div class="col" style="margin-top:10px; min-height:0;">
-                        <h3>Final gemeldet</h3>
-                        @forelse (($registeredFighters ?? collect()) as $fighter)
-                            @php
-                                $fighterId = (int) $fighter->getKey();
-                                $snapshot = (array) ($fighterSnapshots[$fighterId] ?? []);
-                                $classes = (array) ($snapshot['classes'] ?? []);
-                                $record = (array) ($snapshot['record'] ?? []);
-                            @endphp
-                            <article class="fighter-item">
-                                <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
-                                <div class="fighter-meta">Bilanz G/S/N/U: {{ $record['total'] ?? 0 }}/{{ $record['wins'] ?? 0 }}/{{ $record['losses'] ?? 0 }}/{{ $record['draws'] ?? 0 }}</div>
-                                <div class="fighter-meta">Gewicht: {{ $snapshot['weight']['weight_kg'] ?? '-' }} kg</div>
-                                <div class="fighter-class-grid">
-                                    <div class="fighter-class"><strong>Altersklasse</strong>{{ $classes['age'] ?? '-' }}</div>
-                                    <div class="fighter-class"><strong>Leistung</strong>{{ $classes['performance'] ?? '-' }}</div>
-                                    <div class="fighter-class"><strong>Gewicht</strong>{{ $classes['weight'] ?? '-' }}</div>
-                                </div>
-                            </article>
-                        @empty
-                            <div class="fighter-meta">Keine Meldungen vorhanden.</div>
-                        @endforelse
+                @if ($canManageOwnRegistrations)
+                    <div class="registration-note">
+                        @if ($canSubmitRegistrations && ! $isDeadlinePassed)
+                            <strong>Trainer-Ansicht:</strong> Vor Meldeschluss kannst du frei melden und zurückziehen. {{ ($event->registration_approval_mode ?? 'auto') === 'manual' ? 'Neue Meldungen landen zuerst wartend und werden vom Veranstalter freigegeben.' : 'Neue Meldungen werden bei freier Kapazität direkt aktiv.' }}
+                        @elseif ($canSubmitRegistrations)
+                            <strong>Trainer-Ansicht nach Meldeschluss:</strong> Neue oder erneut aktivierte Meldungen werden nur noch wartend erfasst. Rückzüge ändern den operativen Status, aber nicht bereits gesicherte Abrechnungen.
+                        @else
+                            <strong>Trainer-Ansicht:</strong> Die Veranstaltung nimmt aktuell keine neuen Meldungen mehr an. Bereits vorhandene Meldungen bleiben sichtbar.
+                        @endif
                     </div>
                 @endif
+
+                @if ($canManageEventRegistrations)
+                    <div class="registration-note">
+                        <strong>Veranstalter-Hinweis:</strong> Die Bearbeitung aller Meldungen liegt jetzt im Vereinsportal der Veranstaltung im Reiter <strong>Meldungen</strong> des Event-Modals.
+                    </div>
+                @endif
+
+                <div class="panel-stack">
+                    @if ($canManageOwnRegistrations)
+                        @if ($canSubmitRegistrations)
+                            <form method="post" action="{{ route('events.registrations.sync', $event) }}" id="registration-sync-form">
+                                @csrf
+                                <div class="split">
+                                    <div class="col">
+                                        <h3>Aktiv oder wartend</h3>
+                                        <div id="registered-list">
+                                            @foreach (($registeredFighters ?? collect()) as $fighter)
+                                                @php
+                                                    $fighterId = (int) $fighter->getKey();
+                                                    $snapshot = (array) ($fighterSnapshots[$fighterId] ?? []);
+                                                    $classes = (array) ($snapshot['classes'] ?? []);
+                                                    $record = (array) ($snapshot['record'] ?? []);
+                                                    $registration = $registrationByFighterId->get($fighterId);
+                                                @endphp
+                                                <article class="fighter-item" data-fighter-id="{{ $fighterId }}" data-is-registered="1">
+                                                    <input type="hidden" name="fighter_ids[]" value="{{ $fighterId }}">
+                                                    <div class="fighter-row">
+                                                        <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
+                                                        <button class="btn btn-switch" type="button" data-switch-fighter>Raus</button>
+                                                    </div>
+                                                    @if ($registration)
+                                                        <div class="fighter-row">
+                                                            <span class="status-badge {{ $registration->status }}">{{ $statusLabels[$registration->status] ?? $registration->status }}</span>
+                                                            @if ($registration->billable_at)
+                                                                <span class="billable-flag">abrechenbar seit {{ $registration->billable_at->format('d.m.Y H:i') }}</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                    <div class="fighter-meta">Bilanz G/S/N/U: {{ $record['total'] ?? 0 }}/{{ $record['wins'] ?? 0 }}/{{ $record['losses'] ?? 0 }}/{{ $record['draws'] ?? 0 }}</div>
+                                                    <div class="fighter-meta">Gewicht: {{ $snapshot['weight']['weight_kg'] ?? '-' }} kg</div>
+                                                    <div class="fighter-class-grid">
+                                                        <div class="fighter-class"><strong>Altersklasse</strong>{{ $classes['age'] ?? '-' }}</div>
+                                                        <div class="fighter-class"><strong>Leistung</strong>{{ $classes['performance'] ?? '-' }}</div>
+                                                        <div class="fighter-class"><strong>Gewicht</strong>{{ $classes['weight'] ?? '-' }}</div>
+                                                    </div>
+                                                    <div class="fighter-row">
+                                                        <span class="fighter-meta">{{ $fighter->club?->name ?? '-' }}</span>
+                                                        <a class="btn" href="{{ route('clubs.show', ['club' => $fighter->club?->slug, 'tab' => 'fighters', 'edit_fighter' => $fighterId, 'return_event' => $event->getKey()]) }}">Bearbeiten</a>
+                                                    </div>
+                                                </article>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    <div class="col">
+                                        <h3>Noch möglich</h3>
+                                        <div id="possible-list">
+                                            @foreach (($possibleFighters ?? collect()) as $fighter)
+                                                @php
+                                                    $fighterId = (int) $fighter->getKey();
+                                                    $snapshot = (array) ($fighterSnapshots[$fighterId] ?? []);
+                                                    $classes = (array) ($snapshot['classes'] ?? []);
+                                                    $record = (array) ($snapshot['record'] ?? []);
+                                                    $existingRegistration = $registrationByFighterId->get($fighterId);
+                                                @endphp
+                                                <article class="fighter-item" data-fighter-id="{{ $fighterId }}" data-is-registered="0">
+                                                    <input type="hidden" name="fighter_ids[]" value="{{ $fighterId }}" disabled>
+                                                    <div class="fighter-row">
+                                                        <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
+                                                        <button class="btn btn-switch" type="button" data-switch-fighter>Rein</button>
+                                                    </div>
+                                                    @if ($existingRegistration && $existingRegistration->isWithdrawn())
+                                                        <div class="fighter-row">
+                                                            <span class="status-badge withdrawn">{{ $statusLabels[$existingRegistration->status] ?? $existingRegistration->status }}</span>
+                                                            @if ($existingRegistration->billable_at)
+                                                                <span class="billable-flag">bereits abrechenbar</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                    <div class="fighter-meta">Bilanz G/S/N/U: {{ $record['total'] ?? 0 }}/{{ $record['wins'] ?? 0 }}/{{ $record['losses'] ?? 0 }}/{{ $record['draws'] ?? 0 }}</div>
+                                                    <div class="fighter-meta">Gewicht: {{ $snapshot['weight']['weight_kg'] ?? '-' }} kg</div>
+                                                    <div class="fighter-class-grid">
+                                                        <div class="fighter-class"><strong>Altersklasse</strong>{{ $classes['age'] ?? '-' }}</div>
+                                                        <div class="fighter-class"><strong>Leistung</strong>{{ $classes['performance'] ?? '-' }}</div>
+                                                        <div class="fighter-class"><strong>Gewicht</strong>{{ $classes['weight'] ?? '-' }}</div>
+                                                    </div>
+                                                    <div class="fighter-row">
+                                                        <span class="fighter-meta">{{ $fighter->club?->name ?? '-' }}</span>
+                                                        <a class="btn" href="{{ route('clubs.show', ['club' => $fighter->club?->slug, 'tab' => 'fighters', 'edit_fighter' => $fighterId, 'return_event' => $event->getKey()]) }}">Bearbeiten</a>
+                                                    </div>
+                                                </article>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="controls">
+                                    <button class="btn btn-primary" type="submit">Meldungen speichern</button>
+                                </div>
+                            </form>
+                        @else
+                            <div class="col" style="min-height:0;">
+                                <h3>Aktueller Meldestand</h3>
+                                @forelse (($registeredFighters ?? collect()) as $fighter)
+                                    @php
+                                        $fighterId = (int) $fighter->getKey();
+                                        $snapshot = (array) ($fighterSnapshots[$fighterId] ?? []);
+                                        $classes = (array) ($snapshot['classes'] ?? []);
+                                        $record = (array) ($snapshot['record'] ?? []);
+                                        $registration = $registrationByFighterId->get($fighterId);
+                                    @endphp
+                                    <article class="fighter-item">
+                                        <div class="fighter-row">
+                                            <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
+                                            @if ($registration)
+                                                <span class="status-badge {{ $registration->status }}">{{ $statusLabels[$registration->status] ?? $registration->status }}</span>
+                                            @endif
+                                        </div>
+                                        <div class="fighter-meta">Bilanz G/S/N/U: {{ $record['total'] ?? 0 }}/{{ $record['wins'] ?? 0 }}/{{ $record['losses'] ?? 0 }}/{{ $record['draws'] ?? 0 }}</div>
+                                        <div class="fighter-meta">Gewicht: {{ $snapshot['weight']['weight_kg'] ?? '-' }} kg</div>
+                                        <div class="fighter-class-grid">
+                                            <div class="fighter-class"><strong>Altersklasse</strong>{{ $classes['age'] ?? '-' }}</div>
+                                            <div class="fighter-class"><strong>Leistung</strong>{{ $classes['performance'] ?? '-' }}</div>
+                                            <div class="fighter-class"><strong>Gewicht</strong>{{ $classes['weight'] ?? '-' }}</div>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="fighter-meta">Keine Meldungen vorhanden.</div>
+                                @endforelse
+                            </div>
+                        @endif
+                    @endif
+
+                </div>
             </section>
         @endauth
         @endif
     </div>
+
+    @include('partials.main-footer')
+    @include('partials.app-scripts')
 
     <script>
         var registrationForm = document.getElementById('registration-sync-form');
@@ -757,7 +958,7 @@
                 var ageName = chip.getAttribute('data-age-name') || '';
                 var ageCode = chip.getAttribute('data-age-code') || '';
                 var ageRange = chip.getAttribute('data-age-range') || '';
-                selectedAgeLabel.textContent = 'Ausgewaehlte Altersklasse: ' + ageCode + ' - ' + ageName + ' (' + ageRange + ')';
+                selectedAgeLabel.textContent = 'Ausgewählte Altersklasse: ' + ageCode + ' - ' + ageName + ' (' + ageRange + ')';
 
                 var weights = [];
                 try {
@@ -769,7 +970,7 @@
                 weightList.innerHTML = '';
                 if (!Array.isArray(weights) || weights.length === 0) {
                     var emptyItem = document.createElement('li');
-                    emptyItem.textContent = 'Keine Gewichtsklassen verfuegbar.';
+                    emptyItem.textContent = 'Keine Gewichtsklassen verfügbar.';
                     weightList.appendChild(emptyItem);
                     return;
                 }

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClubMembership;
+use App\Models\ClubMembershipRole;
 use App\Models\Event;
 use App\Models\Fighter;
 use App\Models\Registration;
+use App\Services\ClubPermissionService;
+use App\Services\RegistrationWorkflowService;
 use App\Services\Modules\BoxingSettingsStore;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -13,11 +17,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PublicEventController extends Controller
 {
     public function __construct(
         private readonly BoxingSettingsStore $boxingSettingsStore,
+        private readonly ClubPermissionService $clubPermissions,
+        private readonly RegistrationWorkflowService $registrationWorkflow,
     ) {
     }
 
@@ -32,10 +39,28 @@ class PublicEventController extends Controller
         $userClubs = collect();
 
         if ($user) {
-            $userClubs = $user->clubs()
-                ->withCount(['fighters', 'users'])
-                ->orderBy('name')
-                ->get();
+            $userClubs = ClubMembership::query()
+                ->with(['club' => fn ($q) => $q->withCount('fighters'), 'roles'])
+                ->where('user_id', $user->getKey())
+                ->whereHas('club')
+                ->get()
+                ->map(function (ClubMembership $membership) {
+                    $club = $membership->club;
+                    $roleNames = $membership->roles->pluck('role')->all();
+                    $roleLabels = [
+                        ClubMembershipRole::ROLE_CLUB_MANAGER => __('Club-Manager'),
+                        ClubMembershipRole::ROLE_EVENT_MANAGER => __('Veranstaltungsmanager'),
+                        ClubMembershipRole::ROLE_TRAINER => __('Trainer'),
+                    ];
+
+                    $club->setAttribute('user_role_label', implode(', ', array_map(
+                        static fn (string $role): string => $roleLabels[$role] ?? $role,
+                        $roleNames
+                    )));
+                    return $club;
+                })
+                ->sortBy('name')
+                ->values();
         }
 
         if (! $isPrivileged) {
@@ -47,7 +72,7 @@ class PublicEventController extends Controller
         $now = now();
         $events = $events->map(function (Event $event) use ($now): Event {
             $isEnded = $this->isEventEnded($event, $now);
-            $event->setAttribute('display_status', $event->status === 'draft' ? 'draft' : ($isEnded ? 'beendet' : null));
+            $event->setAttribute('display_status', $event->status === 'draft' ? __('Entwurf') : ($isEnded ? __('Beendet') : null));
 
             return $event;
         });
@@ -69,15 +94,18 @@ class PublicEventController extends Controller
             abort(404);
         }
 
+        $this->registrationWorkflow->lockBillingForEvent($event);
+        $event->refresh();
+
         $registrationDeadline = $event->registration_deadline;
         $now = now();
         $isEnded = $this->isEventEnded($event, $now);
-        $isRegistrationOpen = $event->status === 'published'
+        $isDeadlinePassed = $this->registrationWorkflow->hasDeadlinePassed($event);
+        $canSubmitRegistrations = $event->status === 'published'
             && $event->cancelled_at === null
-            && ! $isEnded
-            && ($registrationDeadline === null || now()->lessThanOrEqualTo($registrationDeadline));
+            && ! $isEnded;
 
-        $displayStatus = $event->status === 'draft' ? 'draft' : ($isEnded ? 'beendet' : null);
+        $displayStatus = $event->status === 'draft' ? __('Entwurf') : ($isEnded ? __('Beendet') : null);
 
         $boxingPackages = $this->boxingSettingsStore->readAllPackages();
         $boxingPackageKey = trim((string) ($event->boxing_package_key ?? ''));
@@ -88,14 +116,9 @@ class PublicEventController extends Controller
             ? (array) $boxingPackages[$boxingPackageKey]
             : [];
 
-        $manageableRoles = ['manager', 'owner', 'admin', 'trainer', 'coach'];
-        $manageableClubIds = $user
-            ? $user->clubs()
-                ->wherePivotIn('role', $manageableRoles)
-                ->pluck('clubs.id')
-                ->map(fn ($id) => (int) $id)
-                ->all()
-            : [];
+        $manageableClubIds = $user ? $this->manageableAthleteClubIds($user) : [];
+        $canManageOwnRegistrations = count($manageableClubIds) > 0;
+        $canManageEventRegistrations = $user !== null && $this->canManageEventRegistrations($user, $event);
 
         $eligibleFighters = collect();
         $registrationByFighterId = collect();
@@ -132,11 +155,15 @@ class PublicEventController extends Controller
             }
         }
 
-        $registeredFighterIds = $registrationByFighterId->keys()->map(fn ($id) => (int) $id)->all();
+        $registeredFighterIds = $registrationByFighterId
+            ->filter(fn (Registration $registration) => ! $registration->isWithdrawn())
+            ->keys()
+            ->map(fn ($id) => (int) $id)
+            ->all();
         $registeredFighters = $eligibleFighters
             ->filter(fn (Fighter $fighter) => in_array((int) $fighter->getKey(), $registeredFighterIds, true))
             ->values();
-        $possibleFighters = $isRegistrationOpen
+        $possibleFighters = $canSubmitRegistrations
             ? $eligibleFighters
                 ->filter(fn (Fighter $fighter) => ! in_array((int) $fighter->getKey(), $registeredFighterIds, true))
                 ->values()
@@ -150,7 +177,10 @@ class PublicEventController extends Controller
             'possibleFighters' => $possibleFighters,
             'registrationByFighterId' => $registrationByFighterId,
             'fighterSnapshots' => $fighterSnapshots,
-            'isRegistrationOpen' => $isRegistrationOpen,
+            'canSubmitRegistrations' => $canSubmitRegistrations,
+            'canManageOwnRegistrations' => $canManageOwnRegistrations,
+            'isDeadlinePassed' => $isDeadlinePassed,
+            'canManageEventRegistrations' => $canManageEventRegistrations,
             'displayStatus' => $displayStatus,
             'boxingPackageKey' => $boxingPackageKey,
             'boxingPackage' => $boxingPackage,
@@ -202,23 +232,22 @@ class PublicEventController extends Controller
                 ->withErrors(['Die Veranstaltung ist nicht mehr zur Meldung freigegeben.']);
         }
 
-        if ($event->registration_deadline !== null && now()->greaterThan($event->registration_deadline)) {
+        if ($this->isEventEnded($event, now())) {
             return redirect()
                 ->route('events.show', ['event' => $event, 'tab' => 'registrations'])
-                ->withErrors(['Der Anmeldeschluss ist bereits abgelaufen.']);
+                ->withErrors(['Die Veranstaltung ist bereits beendet.']);
         }
 
-        $manageableClubIds = $user->clubs()
-            ->wherePivotIn('role', ['manager', 'owner', 'admin', 'trainer', 'coach'])
-            ->pluck('clubs.id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        $manageableClubIds = $this->manageableAthleteClubIds($user);
 
         if (count($manageableClubIds) === 0) {
             return redirect()
                 ->route('events.show', ['event' => $event, 'tab' => 'registrations'])
                 ->withErrors(['Keine verwaltbaren Vereine für Meldungen verfügbar.']);
         }
+
+        $this->registrationWorkflow->lockBillingForEvent($event);
+        $event->refresh();
 
         $boxingPackages = $this->boxingSettingsStore->readAllPackages();
         $boxingPackageKey = trim((string) ($event->boxing_package_key ?? ''));
@@ -255,31 +284,37 @@ class PublicEventController extends Controller
 
         $selectedFighterIds = array_values(array_unique(array_map('intval', (array) ($validated['fighter_ids'] ?? []))));
 
+        $fightersById = Fighter::query()
+            ->whereIn('id', $eligibleFighterIds)
+            ->get()
+            ->keyBy('id');
+
         $eligibleRegistrations = Registration::query()
             ->where('event_id', $event->getKey())
             ->whereIn('fighter_id', $eligibleFighterIds)
+            ->with('event')
             ->get()
             ->keyBy('fighter_id');
 
-        $baseCount = Registration::query()
-            ->where('event_id', $event->getKey())
-            ->where('status', '!=', 'cancelled')
-            ->count();
+        $activeCount = $this->registrationWorkflow->activeRegistrationCount($event);
 
-        $newlyRegistered = 0;
-        $newlyUnregistered = 0;
+        $newlyActive = 0;
+        $newlyWaiting = 0;
+        $newlyWithdrawn = 0;
         $limitSkipped = 0;
 
         DB::transaction(function () use (
             $event,
             $selectedFighterIds,
             $eligibleFighterIds,
+            $fightersById,
             $eligibleRegistrations,
             $user,
             $boxingPackage,
-            &$baseCount,
-            &$newlyRegistered,
-            &$newlyUnregistered,
+            &$activeCount,
+            &$newlyActive,
+            &$newlyWaiting,
+            &$newlyWithdrawn,
             &$limitSkipped
         ): void {
             $selectedSet = array_fill_keys($selectedFighterIds, true);
@@ -289,17 +324,23 @@ class PublicEventController extends Controller
                 $isSelected = array_key_exists($fighterId, $selectedSet);
 
                 if (! $isSelected) {
-                    if ($existing) {
-                        if ($existing->status !== 'cancelled') {
-                            $baseCount = max(0, $baseCount - 1);
+                    if ($existing && ! $existing->isWithdrawn()) {
+                        if ($existing->isActive()) {
+                            $activeCount = max(0, $activeCount - 1);
                         }
-                        $existing->delete();
-                        $newlyUnregistered++;
+                        $this->registrationWorkflow->transitionStatus(
+                            $existing,
+                            Registration::STATUS_WITHDRAWN,
+                            $user,
+                            $this->registrationWorkflow->hasDeadlinePassed($event) ? 'trainer_withdrew_after_deadline' : 'trainer_withdrew_before_deadline',
+                            ['source' => 'trainer_sync']
+                        );
+                        $newlyWithdrawn++;
                     }
                     continue;
                 }
 
-                $fighter = Fighter::query()->find($fighterId);
+                $fighter = $fightersById->get($fighterId);
                 if (! $fighter) {
                     continue;
                 }
@@ -311,41 +352,72 @@ class PublicEventController extends Controller
                         'fighter_snapshot' => $snapshot,
                         'notes' => $snapshot['summary'] ?? null,
                         'registered_by_user_id' => $user->getKey(),
+                        'status_changed_at' => $existing->status_changed_at ?? now(),
                     ]);
                     $existing->save();
+
+                    if ($existing->isWithdrawn()) {
+                        $targetStatus = $this->registrationWorkflow->determineInitialStatus($event, $activeCount);
+                        if ($targetStatus === null) {
+                            $limitSkipped++;
+                            continue;
+                        }
+
+                        $this->registrationWorkflow->transitionStatus(
+                            $existing,
+                            $targetStatus,
+                            $user,
+                            $this->registrationWorkflow->hasDeadlinePassed($event) ? 'trainer_resubmitted_after_deadline' : 'trainer_resubmitted_before_deadline',
+                            ['source' => 'trainer_sync']
+                        );
+
+                        if ($targetStatus === Registration::STATUS_ACTIVE) {
+                            $activeCount++;
+                            $newlyActive++;
+                        } else {
+                            $newlyWaiting++;
+                        }
+                    }
+
                     continue;
                 }
 
-                $maxRegistrations = $event->max_registrations;
-                $limitReached = is_numeric($maxRegistrations) && $baseCount >= (int) $maxRegistrations;
-
-                if ($limitReached && ! $event->allow_waitlist) {
+                $targetStatus = $this->registrationWorkflow->determineInitialStatus($event, $activeCount);
+                if ($targetStatus === null) {
                     $limitSkipped++;
                     continue;
                 }
 
-                Registration::query()->create([
+                $registration = Registration::query()->create([
                     'fighter_id' => $fighterId,
                     'event_id' => $event->getKey(),
-                    'status' => $limitReached ? 'waitlisted' : 'pending',
+                    'status' => $targetStatus,
                     'registered_by_user_id' => $user->getKey(),
                     'fighter_snapshot' => $snapshot,
                     'notes' => $snapshot['summary'] ?? null,
+                    'status_changed_at' => now(),
                 ]);
 
-                $newlyRegistered++;
-                if (! $limitReached) {
-                    $baseCount++;
+                $this->registrationWorkflow->markCreated($registration, $user, 'trainer_created_registration', ['source' => 'trainer_sync']);
+
+                if ($targetStatus === Registration::STATUS_ACTIVE) {
+                    $activeCount++;
+                    $newlyActive++;
+                } else {
+                    $newlyWaiting++;
                 }
             }
         });
 
         $statusParts = [];
-        if ($newlyRegistered > 0) {
-            $statusParts[] = $newlyRegistered . ' gemeldet';
+        if ($newlyActive > 0) {
+            $statusParts[] = $newlyActive . ' aktiv';
         }
-        if ($newlyUnregistered > 0) {
-            $statusParts[] = $newlyUnregistered . ' abgemeldet';
+        if ($newlyWaiting > 0) {
+            $statusParts[] = $newlyWaiting . ' wartend';
+        }
+        if ($newlyWithdrawn > 0) {
+            $statusParts[] = $newlyWithdrawn . ' zurückgezogen';
         }
         if ($limitSkipped > 0) {
             $statusParts[] = $limitSkipped . ' nicht gemeldet (Limit erreicht)';
@@ -358,6 +430,111 @@ class PublicEventController extends Controller
         return redirect()
             ->route('events.show', ['event' => $event, 'tab' => 'registrations'])
             ->with('status', $statusMessage);
+    }
+
+    public function manageRegistrations(Request $request, Event $event): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $user || ! $this->canManageEventRegistrations($user, $event)) {
+            abort(403);
+        }
+
+        $this->registrationWorkflow->lockBillingForEvent($event);
+        $event->refresh();
+
+        $registrationIds = Registration::query()
+            ->where('event_id', $event->getKey())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $validated = $request->validate([
+            'registration_ids' => ['required', 'array', 'min:1'],
+            'registration_ids.*' => ['integer', Rule::in($registrationIds)],
+            'status' => ['required', Rule::in([
+                Registration::STATUS_ACTIVE,
+                Registration::STATUS_WAITING,
+                Registration::STATUS_WITHDRAWN,
+            ])],
+            'reason' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $registrations = Registration::query()
+            ->where('event_id', $event->getKey())
+            ->whereIn('id', (array) $validated['registration_ids'])
+            ->get();
+
+        $changed = 0;
+        foreach ($registrations as $registration) {
+            $before = (string) $registration->status;
+            $this->registrationWorkflow->transitionStatus(
+                $registration,
+                (string) $validated['status'],
+                $user,
+                $validated['reason'] ?? 'organizer_status_change',
+                ['source' => 'organizer_manage']
+            );
+
+            if ($before !== (string) $validated['status']) {
+                $changed++;
+            }
+        }
+
+        return redirect()
+            ->route('events.show', ['event' => $event, 'tab' => 'registrations'])
+            ->with('status', $changed > 0 ? $changed . ' Meldungen wurden aktualisiert.' : 'Keine Statusänderung erforderlich.');
+    }
+
+    public function exportRegistrations(Request $request, Event $event): StreamedResponse
+    {
+        $user = $request->user();
+        if (! $user || ! $this->canManageEventRegistrations($user, $event)) {
+            abort(403);
+        }
+
+        $this->registrationWorkflow->lockBillingForEvent($event);
+        $event->refresh();
+
+        $registrations = Registration::query()
+            ->with(['fighter.club', 'registeredBy'])
+            ->where('event_id', $event->getKey())
+            ->get()
+            ->sortBy([
+                fn (Registration $registration) => strtolower((string) ($registration->fighter?->club?->name ?? '')),
+                fn (Registration $registration) => strtolower((string) ($registration->fighter?->last_name ?? '')),
+                fn (Registration $registration) => strtolower((string) ($registration->fighter?->first_name ?? '')),
+            ])
+            ->values();
+
+        $fileName = 'meldungen-' . $event->getKey() . '-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($registrations): void {
+            $handle = fopen('php://output', 'w');
+            if (! is_resource($handle)) {
+                return;
+            }
+
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, ['Verein', 'Kämpfer', 'Status', 'Abrechenbar', 'Abrechenbar seit', 'Meldegrund', 'Gemeldet von', 'Zuletzt geändert', 'Notizen'], ';');
+
+            foreach ($registrations as $registration) {
+                fputcsv($handle, [
+                    (string) ($registration->fighter?->club?->name ?? ''),
+                    trim((string) (($registration->fighter?->first_name ?? '') . ' ' . ($registration->fighter?->last_name ?? ''))),
+                    (string) $registration->status,
+                    $registration->billable_at !== null ? 'ja' : 'nein',
+                    $registration->billable_at?->format('Y-m-d H:i:s') ?? '',
+                    (string) ($registration->billable_reason ?? ''),
+                    (string) ($registration->registeredBy?->name ?? $registration->registeredBy?->email ?? ''),
+                    $registration->status_changed_at?->format('Y-m-d H:i:s') ?? '',
+                    (string) ($registration->notes ?? ''),
+                ], ';');
+            }
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     private function buildFighterSnapshotForEvent(Fighter $fighter, Event $event, array $boxingPackage = []): array
@@ -548,5 +725,23 @@ class PublicEventController extends Controller
         }
 
         return $path !== '' ? $path : null;
+    }
+
+    private function manageableAthleteClubIds($user): array
+    {
+        return ClubMembership::query()
+            ->where('user_id', $user->getKey())
+            ->whereHas('roles', fn ($q) => $q->whereIn('role', [
+                ClubMembershipRole::ROLE_CLUB_MANAGER,
+                ClubMembershipRole::ROLE_TRAINER,
+            ]))
+            ->pluck('club_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    private function canManageEventRegistrations($user, Event $event): bool
+    {
+        return $user->isPlatformAdmin() || $this->clubPermissions->canManageEvents($user, (int) $event->organizer_club_id);
     }
 }

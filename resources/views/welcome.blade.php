@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="de">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Willkommen | {{ config('brand.name') }}</title>
+    <title>{{ __('Willkommen') }} | {{ config('brand.name') }}</title>
+    @include('partials.app-assets')
     <style>
         :root {
             --bg: #f4f6f2;
@@ -20,20 +21,9 @@
 
         * { box-sizing: border-box; }
 
-        body {
-            margin: 0;
-            font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at 12% 12%, rgba(125, 185, 40, 0.14), transparent 34%),
-                radial-gradient(circle at 85% 16%, rgba(1, 103, 52, 0.08), transparent 28%),
-                linear-gradient(160deg, var(--bg), var(--bg-alt));
-            min-height: 100vh;
-        }
-
         .page {
-            width: min(1140px, calc(100% - 28px));
-            margin: 16px auto 26px;
+            width: min(1480px, calc(100% - 24px));
+            margin: 0 auto;
         }
 
         .shell {
@@ -348,55 +338,18 @@
         }
     </style>
 </head>
-<body>
+<body class="app-shell">
+    @include('partials.main-navbar')
+
     <div class="page">
         <div class="shell">
-            <header class="topbar panel">
-                <a class="brand" href="{{ route('welcome') }}" aria-label="Startseite">
-                    <img class="brand-wordmark" src="{{ asset(config('brand.logo')) }}" alt="{{ config('brand.name') }}">
-                </a>
-                <div class="top-right">
-                    @auth
-                        <div class="hello">
-                            Hallo {{ Str::of(auth()->user()->name)->before(' ') }}
-                            @if (auth()->user()->isSuperAdmin())
-                                (Superadmin)
-                            @elseif (auth()->user()->isPlatformAdmin())
-                                (Admin)
-                            @endif
-                        </div>
-                    @endauth
-                    <div class="top-actions">
-                        <nav class="top-menu" aria-label="Hauptmenue">
-                    @guest
-                            <a class="menu-link" href="{{ route('register') }}">Registrieren</a>
-                            <a class="menu-link" href="{{ route('login') }}">Anmelden</a>
-                    @else
-                        @if (auth()->user()->isSuperAdmin())
-                                <a class="menu-link" href="{{ route('admin.dashboard') }}">SuperUser</a>
-                        @elseif (auth()->user()->isPlatformAdmin())
-                                <a class="menu-link" href="{{ route('admin.clubs.index') }}">Clubs & Anfragen</a>
-                        @endif
-                            <a class="menu-link" href="{{ route('welcome') }}">Startseite</a>
-                    @endguest
-                        </nav>
-                        @auth
-                            <form method="post" action="{{ route('logout') }}">
-                                @csrf
-                                <button class="btn btn-primary" type="submit">Logout</button>
-                            </form>
-                        @endauth
-                    </div>
-                </div>
-            </header>
-
             @auth
                 @if ($isImpersonating)
                     <div class="impersonation">
-                        <div><strong>Ansicht gewechselt.</strong> Du siehst aktuell die Perspektive eines anderen Users.</div>
+                        <div><strong>{{ __('Ansicht gewechselt.') }}</strong> {{ __('Du siehst aktuell die Perspektive eines anderen Users.') }}</div>
                         <form method="post" action="{{ route('admin.impersonation.stop') }}">
                             @csrf
-                            <button class="btn btn-primary" type="submit">Zurueck zum Superuser</button>
+                            <button class="btn btn-primary" type="submit">{{ __('Zurück zum Superuser') }}</button>
                         </form>
                     </div>
                 @endif
@@ -404,60 +357,50 @@
 
             @auth
                 <div class="auth-middle">
-                    <section class="section panel" aria-label="Meine Vereine">
-                        <h2>Meine Vereine</h2>
+                    <section class="section panel" aria-label="{{ __('Meine Vereine') }}">
+                        <h2>{{ __('Meine Vereine') }}</h2>
                         @if ($userClubs->isEmpty())
-                            <div class="muted" style="margin-top:8px;">Keine Vereinszuordnung vorhanden.</div>
+                            <div class="muted" style="margin-top:8px;">{{ __('Keine Vereinszuordnung vorhanden.') }}</div>
                         @else
                             <div class="club-list">
                                 @foreach ($userClubs as $club)
                                     <a class="club-card-link" href="{{ route('clubs.show', $club) }}">
                                         <strong>{{ $club->name }}</strong>
-                                        <div class="muted" style="margin-top:4px;">{{ strtoupper($club->pivot->role) }} · {{ $club->fighters_count }} Kaempfer</div>
+                                        <div class="muted" style="margin-top:4px;">{{ $club->user_role_label }} · {{ $club->fighters_count }} {{ __('Kämpfer') }}</div>
                                     </a>
                                 @endforeach
                             </div>
                         @endif
                     </section>
 
-                    <section class="hero panel" aria-label="Willkommenstext">
+                    <section class="hero panel" aria-label="{{ __('Willkommenstext') }}">
                         <div>
-                            <div class="eyebrow">Willkommen</div>
-                            <h1>Digitale Plattform fuer Box- und Kampfsport-Events</h1>
+                            <div class="eyebrow">{{ __('Willkommen') }}</div>
+                            <h1>{{ __('Digitale Plattform für Box- und Kampfsport-Events') }}</h1>
                             <div>
                                 <p>
-                                    <img class="inline-illustration" src="{{ asset('assets/brand/icons/icon_hello.png') }}" alt="Freundlicher Boxer gruessend">
-                                    <strong>Deine digitale Heimat</strong> fuer alle Box- und Kampfsportveranstaltungen.
+                                    <img class="inline-illustration" src="{{ asset('assets/brand/icons/icon_hello.png') }}" alt="{{ __('Freundlicher Boxer grüßend') }}">
+                                    <strong>{{ __('Deine digitale Heimat') }}</strong> {{ __('für alle Box- und Kampfsportveranstaltungen.') }}
                                 </p>
                                 <p>
-                                    <strong>Unser Ziel ist klar:</strong> eine einfache, schnelle und stressfreie Anmeldung zu allen wichtigen Kampfsportevents, von Turnieren bis zu Lehrgaengen.
+                                    <strong>{{ __('Unser Ziel ist klar:') }}</strong> {{ __('eine einfache, schnelle und stressfreie Anmeldung zu allen wichtigen Kampfsportevents, von Turnieren bis zu Lehrgängen.') }}
                                 </p>
-                                <p>
-                                    BaseForFight ist so intuitiv gestaltet, dass jeder Kaempfer sofort loslegen kann und Veranstalter sowie Trainer spuerbar Zeit sparen.
-                                </p>
-                                <p>
-                                    <strong>Durch automatisierte Anmeldungen</strong> entlasten wir all jene, die ihre Freizeit und Leidenschaft dem Sport widmen. Gleichzeitig bieten wir allen Kampfsportbegeisterten eine Plattform, die weit ueber die reine Anmeldung hinausgeht.
-                                </p>
-                                <p>
-                                    Das Internet macht vieles leichter. Wir nutzen diese Moeglichkeiten, um Veranstalter, Trainer und Kaempfer besser zu vernetzen, Ablaeufe zu vereinfachen und mehr Transparenz in den Kampfsport zu bringen.
-                                </p>
-                                <p>
-                                    <strong>Besonders im Kampfsport</strong>, wo Respekt und Ehrlichkeit zaehlen, wollen wir eine Community schaffen, die zusammenhaelt. Darum entwickeln wir BaseForFight staendig weiter, damit du noch mehr Nutzen daraus ziehen kannst.
-                                </p>
-                                <p>
-                                    <strong>Deine Meinung ist uns wichtig:</strong> Wenn dir etwas auffaellt oder du eine Idee hast, melde dich einfach. Wir finden gemeinsam eine Loesung.
-                                </p>
+                                <p>{{ __('BaseForFight ist so intuitiv gestaltet, dass jeder Kämpfer sofort loslegen kann und Veranstalter sowie Trainer spürbar Zeit sparen.') }}</p>
+                                <p><strong>{{ __('Durch automatisierte Anmeldungen') }}</strong> {{ __('entlasten wir all jene, die ihre Freizeit und Leidenschaft dem Sport widmen. Gleichzeitig bieten wir allen Kampfsportbegeisterten eine Plattform, die weit über die reine Anmeldung hinausgeht.') }}</p>
+                                <p>{{ __('Das Internet macht vieles leichter. Wir nutzen diese Möglichkeiten, um Veranstalter, Trainer und Kämpfer besser zu vernetzen, Abläufe zu vereinfachen und mehr Transparenz in den Kampfsport zu bringen.') }}</p>
+                                <p><strong>{{ __('Besonders im Kampfsport') }}</strong> {{ __('wo Respekt und Ehrlichkeit zählen, wollen wir eine Community schaffen, die zusammenhält. Darum entwickeln wir BaseForFight staendig weiter, damit du noch mehr Nutzen daraus ziehen kannst.') }}</p>
+                                <p><strong>{{ __('Deine Meinung ist uns wichtig:') }}</strong> {{ __('Wenn dir etwas auffällt oder du eine Idee hast, melde dich einfach. Wir finden gemeinsam eine Lösung.') }}</p>
                             </div>
                             <div class="hero-actions">
                                 @if (auth()->user()->isSuperAdmin())
-                                    <a class="btn btn-primary" href="{{ route('admin.dashboard') }}">Zum Dashboard</a>
+                                    <a class="btn btn-primary" href="{{ route('admin.dashboard') }}">{{ __('Zum Dashboard') }}</a>
                                 @elseif ($userClubs->isNotEmpty())
-                                    <a class="btn btn-primary" href="{{ route('clubs.show', $userClubs->first()) }}">Zu deinem Verein</a>
+                                    <a class="btn btn-primary" href="{{ route('clubs.show', $userClubs->first()) }}">{{ __('Zu deinem Verein') }}</a>
                                 @else
-                                    <a class="btn btn-primary" href="{{ route('welcome') }}">Zur Startseite</a>
+                                    <a class="btn btn-primary" href="{{ route('welcome') }}">{{ __('Zur Startseite') }}</a>
                                 @endif
                                 @if (auth()->user()->isSuperAdmin())
-                                    <a class="btn btn-soft" href="{{ url('/api/v1/health') }}" target="_blank" rel="noopener">Systemstatus</a>
+                                    <a class="btn btn-soft" href="{{ url('/api/v1/health') }}" target="_blank" rel="noopener">{{ __('Systemstatus') }}</a>
                                 @endif
                             </div>
                         </div>
@@ -466,50 +409,40 @@
             @else
                 <section class="hero panel">
                     <div>
-                        <div class="eyebrow">Willkommen</div>
-                        <h1>Digitale Plattform fuer Box- und Kampfsport-Events</h1>
+                        <div class="eyebrow">{{ __('Willkommen') }}</div>
+                        <h1>{{ __('Digitale Plattform für Box- und Kampfsport-Events') }}</h1>
                             <div>
                                 <p>
-                                    <img class="inline-illustration" src="{{ asset('assets/brand/icons/icon_hello.png') }}" alt="Freundlicher Boxer gruessend">
-                                    <strong>Deine digitale Heimat</strong> fuer alle Box- und Kampfsportveranstaltungen.
+                                    <img class="inline-illustration" src="{{ asset('assets/brand/icons/icon_hello.png') }}" alt="{{ __('Freundlicher Boxer grüßend') }}">
+                                    <strong>{{ __('Deine digitale Heimat') }}</strong> {{ __('für alle Box- und Kampfsportveranstaltungen.') }}
                                 </p>
                                 <p>
-                                    <strong>Unser Ziel ist klar:</strong> eine einfache, schnelle und stressfreie Anmeldung zu allen wichtigen Kampfsportevents, von Turnieren bis zu Lehrgaengen.
+                                    <strong>{{ __('Unser Ziel ist klar:') }}</strong> {{ __('eine einfache, schnelle und stressfreie Anmeldung zu allen wichtigen Kampfsportevents, von Turnieren bis zu Lehrgängen.') }}
                                 </p>
-                                <p>
-                                    BaseForFight ist so intuitiv gestaltet, dass jeder Kaempfer sofort loslegen kann und Veranstalter sowie Trainer spuerbar Zeit sparen.
-                                </p>
-                                <p>
-                                    <strong>Durch automatisierte Anmeldungen</strong> entlasten wir all jene, die ihre Freizeit und Leidenschaft dem Sport widmen. Gleichzeitig bieten wir allen Kampfsportbegeisterten eine Plattform, die weit ueber die reine Anmeldung hinausgeht.
-                                </p>
-                                <p>
-                                    Das Internet macht vieles leichter. Wir nutzen diese Moeglichkeiten, um Veranstalter, Trainer und Kaempfer besser zu vernetzen, Ablaeufe zu vereinfachen und mehr Transparenz in den Kampfsport zu bringen.
-                                </p>
-                                <p>
-                                    <strong>Besonders im Kampfsport</strong>, wo Respekt und Ehrlichkeit zaehlen, wollen wir eine Community schaffen, die zusammenhaelt. Darum entwickeln wir BaseForFight staendig weiter, damit du noch mehr Nutzen daraus ziehen kannst.
-                                </p>
-                                <p>
-                                    <strong>Deine Meinung ist uns wichtig:</strong> Wenn dir etwas auffaellt oder du eine Idee hast, melde dich einfach. Wir finden gemeinsam eine Loesung.
-                                </p>
+                                <p>{{ __('BaseForFight ist so intuitiv gestaltet, dass jeder Kämpfer sofort loslegen kann und Veranstalter sowie Trainer spürbar Zeit sparen.') }}</p>
+                                <p><strong>{{ __('Durch automatisierte Anmeldungen') }}</strong> {{ __('entlasten wir all jene, die ihre Freizeit und Leidenschaft dem Sport widmen. Gleichzeitig bieten wir allen Kampfsportbegeisterten eine Plattform, die weit über die reine Anmeldung hinausgeht.') }}</p>
+                                <p>{{ __('Das Internet macht vieles leichter. Wir nutzen diese Möglichkeiten, um Veranstalter, Trainer und Kämpfer besser zu vernetzen, Abläufe zu vereinfachen und mehr Transparenz in den Kampfsport zu bringen.') }}</p>
+                                <p><strong>{{ __('Besonders im Kampfsport') }}</strong> {{ __('wo Respekt und Ehrlichkeit zählen, wollen wir eine Community schaffen, die zusammenhält. Darum entwickeln wir BaseForFight staendig weiter, damit du noch mehr Nutzen daraus ziehen kannst.') }}</p>
+                                <p><strong>{{ __('Deine Meinung ist uns wichtig:') }}</strong> {{ __('Wenn dir etwas auffällt oder du eine Idee hast, melde dich einfach. Wir finden gemeinsam eine Lösung.') }}</p>
                             </div>
                         <div class="hero-actions">
-                            <a class="btn btn-primary" href="{{ route('login') }}">Jetzt einloggen</a>
+                            <a class="btn btn-primary" href="{{ route('login') }}">{{ __('Jetzt einloggen') }}</a>
                         </div>
                     </div>
                 </section>
             @endauth
 
             <div class="layout">
-                <section class="section panel" aria-label="Eventkalender Vorschau">
-                    <h2>Eventkalender</h2>
+                <section class="section panel" aria-label="{{ __('Eventkalender Vorschau') }}">
+                    <h2>{{ __('Eventkalender') }}</h2>
                     @if ($isPrivilegedView)
-                        <div class="muted" style="margin-top:6px;">Als Admin siehst du auch Entwuerfe, damit du in Ruhe planen kannst.</div>
+                        <div class="muted" style="margin-top:6px;">{{ __('Als Admin siehst du auch Entwürfe, damit du in Ruhe planen kannst.') }}</div>
                     @endif
                     <div class="events-list">
                         @forelse ($events as $event)
                             <article class="row event-row">
-                                <div class="event-date-sheet" aria-label="Veranstaltungsdatum">
-                                    <div class="month">{{ $event->starts_at->locale('de')->translatedFormat('M') }}</div>
+                                <div class="event-date-sheet" aria-label="{{ __('Veranstaltungsdatum') }}">
+                                    <div class="month">{{ $event->starts_at->locale(app()->getLocale())->translatedFormat('M') }}</div>
                                     <div class="day">{{ $event->starts_at->format('d') }}</div>
                                     <div class="time">{{ $event->starts_at->format('H:i') }}</div>
                                 </div>
@@ -517,53 +450,53 @@
                                 <div>
                                     <div class="event-head">
                                         <strong>{{ $event->title }}</strong>
-                                        <a class="inline-link" href="{{ route('events.show', $event) }}">Ansehen</a>
+                                        <a class="inline-link" href="{{ route('events.show', $event) }}">{{ __('Ansehen') }}</a>
                                     </div>
                                     @if (! empty($event->description))
                                         <div class="muted" style="margin-top:4px;">{{ \Illuminate\Support\Str::limit($event->description, 120) }}</div>
                                     @endif
                                     <div class="event-meta">
                                         @if (! empty($event->location))
-                                            <span>Ort: {{ $event->location }}</span>
+                                            <span>{{ __('Ort:') }} {{ $event->location }}</span>
                                         @endif
                                         @if (! empty($event->venue_name))
-                                            <span>Halle: {{ $event->venue_name }}</span>
+                                            <span>{{ __('Halle:') }} {{ $event->venue_name }}</span>
                                         @endif
                                         @if (! empty($event->entry_fee_cents))
-                                            <span>Gebuehr: {{ number_format($event->entry_fee_cents / 100, 2, ',', '.') }} {{ $event->currency ?? 'EUR' }}</span>
+                                            <span>{{ __('Gebuehr:') }} {{ number_format($event->entry_fee_cents / 100, 2, ',', '.') }} {{ $event->currency ?? 'EUR' }}</span>
                                         @endif
                                         @if ($event->registration_deadline)
-                                            <span>Anmeldeschluss: {{ $event->registration_deadline->format('d.m.Y H:i') }}</span>
+                                            <span>{{ __('Anmeldeschluss:') }} {{ $event->registration_deadline->format('d.m.Y H:i') }}</span>
                                         @endif
                                         @if (! empty($event->max_registrations))
-                                            <span>Max: {{ $event->max_registrations }}</span>
+                                            <span>{{ __('Max:') }} {{ $event->max_registrations }}</span>
                                         @endif
                                         @if ($event->allow_waitlist)
-                                            <span>Warteliste erlaubt</span>
+                                            <span>{{ __('Warteliste erlaubt') }}</span>
                                         @endif
                                         @if (! empty($event->boxing_package_key))
-                                            <span>Box-Paket: {{ $event->boxing_package_key }}</span>
+                                            <span>{{ __('Box-Paket:') }} {{ $event->boxing_package_key }}</span>
                                         @endif
                                     </div>
                                     @if (! empty($event->display_status))
-                                        <span class="pill">{{ strtoupper($event->display_status) }}</span>
+                                        <span class="pill">{{ $event->display_status }}</span>
                                     @endif
                                 </div>
                             </article>
                         @empty
                             <div class="row">
-                                <strong>Aktuell keine Veranstaltungen verfuegbar.</strong>
-                                <div class="muted" style="margin-top:4px;">Sobald Events veroeffentlicht sind, erscheinen sie hier automatisch.</div>
+                                <strong>{{ __('Aktuell keine Veranstaltungen verfügbar.') }}</strong>
+                                <div class="muted" style="margin-top:4px;">{{ __('Sobald Events veröffentlicht sind, erscheinen sie hier automatisch.') }}</div>
                             </div>
                         @endforelse
                     </div>
                 </section>
             </div>
 
-            <footer>
-                © {{ now()->year }} baseforfight.de - Friendly Combat Sports Operations
-            </footer>
         </div>
     </div>
+
+    @include('partials.main-footer')
+    @include('partials.app-scripts')
 </body>
 </html>

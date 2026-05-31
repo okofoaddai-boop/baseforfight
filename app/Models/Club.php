@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -26,6 +25,12 @@ class Club extends Model
         'billing_city',
         'billing_country',
         'created_by_user_id',
+        'is_demo',
+        'demo_batch',
+    ];
+
+    protected $casts = [
+        'is_demo' => 'boolean',
     ];
 
     public function getRouteKeyName(): string
@@ -38,11 +43,9 @@ class Club extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
-    public function users(): BelongsToMany
+    public function memberships(): HasMany
     {
-        return $this->belongsToMany(User::class)
-            ->withPivot(['role', 'joined_at'])
-            ->withTimestamps();
+        return $this->hasMany(ClubMembership::class);
     }
 
     public function fighters(): HasMany

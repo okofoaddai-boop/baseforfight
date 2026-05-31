@@ -30,7 +30,19 @@ class AdminAuthController extends Controller
 
         if (! Auth::attempt($credentials, (bool) $request->boolean('remember'))) {
             throw ValidationException::withMessages([
-                'email' => 'Die Zugangsdaten sind ungueltig.',
+                'email' => __('Die Zugangsdaten sind ungültig.'),
+            ]);
+        }
+
+        $user = Auth::user();
+
+        if ($user && ! $user->email_verified_at) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => __('Bitte bestätige zuerst deine E-Mail-Adresse. Prüfe deinen Posteingang.'),
             ]);
         }
 

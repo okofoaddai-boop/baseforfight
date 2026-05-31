@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'Admin Dashboard | BaseForFight')
+@section('title', __('Admin Dashboard') . ' | BaseForFight')
 
 @push('head')
     <style>
@@ -186,36 +186,36 @@
 @section('content')
     <div class="header">
         <div>
-            <h1>Operations Dashboard</h1>
-            <div class="hint"><img class="inline-illustration" src="{{ asset('assets/brand/icons/icon_organize.png') }}" alt="Boxer organisiert Arbeitsablauf">Kernaufgaben zuerst: steuern, pruefen, bei Bedarf in Nutzerperspektive wechseln.</div>
+            <h1>{{ __('Operations Dashboard') }}</h1>
+            <div class="hint"><img class="inline-illustration" src="{{ asset('assets/brand/icons/icon_organize.png') }}" alt="{{ __('Boxer organisiert Arbeitsablauf') }}">{{ __('Kernaufgaben zuerst: steuern, prüfen, bei Bedarf in Nutzerperspektive wechseln.') }}</div>
         </div>
         <div class="actions">
             @if (session()->has('impersonator_id'))
                 <form method="post" action="{{ route('admin.impersonation.stop') }}">
                     @csrf
-                    <button class="logout" type="submit" style="background:#7db928;">Zurueck</button>
+                    <button class="logout" type="submit" style="background:#7db928;">{{ __('Zurück') }}</button>
                 </form>
             @endif
-            <button class="logout" type="button" onclick="document.getElementById('user-switch-modal').showModal()" style="background:#016734;">Ansicht wechseln</button>
+            <button class="logout" type="button" onclick="document.getElementById('user-switch-modal').showModal()" style="background:#016734;">{{ __('Ansicht wechseln') }}</button>
             <form method="post" action="{{ route('logout') }}">
                 @csrf
-                <button class="logout" type="submit">Logout</button>
+                <button class="logout" type="submit">{{ __('Logout') }}</button>
             </form>
         </div>
     </div>
 
     <section class="kpi-grid">
-        <article class="kpi"><div class="kpi-label">Users</div><div class="kpi-value">{{ $stats['users'] }}</div></article>
-        <article class="kpi"><div class="kpi-label">Clubs</div><div class="kpi-value">{{ $stats['clubs'] }}</div></article>
-        <article class="kpi"><div class="kpi-label">Fighters</div><div class="kpi-value">{{ $stats['fighters'] }}</div></article>
-        <article class="kpi"><div class="kpi-label">Events</div><div class="kpi-value">{{ $stats['events'] }}</div></article>
-        <article class="kpi"><div class="kpi-label">Registrations</div><div class="kpi-value">{{ $stats['registrations'] }}</div></article>
-        <article class="kpi"><div class="kpi-label">Open Invitations</div><div class="kpi-value">{{ $stats['open_invitations'] }}</div></article>
+        <article class="kpi"><div class="kpi-label">{{ __('Benutzer') }}</div><div class="kpi-value">{{ $stats['users'] }}</div></article>
+        <article class="kpi"><div class="kpi-label">{{ __('Clubs') }}</div><div class="kpi-value">{{ $stats['clubs'] }}</div></article>
+        <article class="kpi"><div class="kpi-label">{{ __('Kämpfer') }}</div><div class="kpi-value">{{ $stats['fighters'] }}</div></article>
+        <article class="kpi"><div class="kpi-label">{{ __('Events') }}</div><div class="kpi-value">{{ $stats['events'] }}</div></article>
+        <article class="kpi"><div class="kpi-label">{{ __('Registrierungen') }}</div><div class="kpi-value">{{ $stats['registrations'] }}</div></article>
+        <article class="kpi"><div class="kpi-label">{{ __('Offene Einladungen') }}</div><div class="kpi-value">{{ $stats['open_invitations'] }}</div></article>
     </section>
 
     <section class="layout">
         <div class="card">
-            <h2 class="section-title">Endpoint Navigator</h2>
+            <h2 class="section-title">{{ __('Endpoint Navigator') }}</h2>
             @foreach ($endpointGroups as $group => $endpoints)
                 <div class="endpoint-group">
                     <h3 style="margin:0 0 8px;">{{ $group }}</h3>
@@ -241,7 +241,7 @@
                     @foreach ($dashboardClubs as $club)
                         <div class="row">
                             <span>{{ $club->name }}</span>
-                            <span class="pill">{{ $club->fighters_count }} Kaempfer</span>
+                            <span class="pill">{{ $club->fighters_count }} Kämpfer</span>
                         </div>
                     @endforeach
                 </div>
@@ -275,7 +275,7 @@
     <dialog id="user-switch-modal">
         <form class="modal-head" method="dialog">
             <strong>Ansicht wechseln</strong>
-            <button class="logout" type="submit" style="background:#dd6850;">Schliessen</button>
+            <button class="logout" type="submit" style="background:#dd6850;">Schließen</button>
         </form>
         <div class="modal-body">
             <div class="user-grid">
@@ -284,8 +284,11 @@
                         <strong>{{ $user->name }}</strong><br>
                         <span class="hint" style="font-size:13px;">{{ $user->email }}</span>
                         <div class="user-meta">
-                            @forelse ($user->clubs as $club)
-                                <div>{{ $club->name }} · {{ strtoupper($club->pivot->role) }}</div>
+                            @forelse ($user->memberships as $membership)
+                                <div>
+                                    {{ $membership->club?->name ?? 'Kein Verein' }} ·
+                                    {{ $membership->roles->pluck('role')->map(fn ($role) => strtoupper($role))->implode(', ') ?: 'MITGLIED' }}
+                                </div>
                             @empty
                                 <div>Kein Verein</div>
                             @endforelse

@@ -2,13 +2,10 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -22,11 +19,16 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
+        'phone',
         'email',
         'password',
         'email_verification_token',
         'is_admin_support',
         'is_super_admin',
+        'is_demo',
+        'demo_batch',
     ];
 
     /**
@@ -49,6 +51,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_admin_support' => 'boolean',
         'is_super_admin' => 'boolean',
+        'is_demo' => 'boolean',
     ];
 
     public function isAdminSupport(): bool
@@ -78,11 +81,9 @@ class User extends Authenticatable
         return in_array($email, $emails, true);
     }
 
-    public function clubs(): BelongsToMany
+    public function memberships(): HasMany
     {
-        return $this->belongsToMany(Club::class)
-            ->withPivot(['role', 'joined_at'])
-            ->withTimestamps();
+        return $this->hasMany(ClubMembership::class);
     }
 
     public function createdClubs(): HasMany
@@ -105,13 +106,41 @@ class User extends Authenticatable
         return $this->hasMany(Registration::class, 'registered_by_user_id');
     }
 
-    public function clubRoleFor(int $clubId): ?string
+    public function clubRolesFor(int $clubId): array
     {
-        $role = DB::table('club_user')
+        $membership = ClubMembership::query()
             ->where('club_id', $clubId)
             ->where('user_id', $this->getKey())
-            ->value('role');
+            ->first();
 
-        return is_string($role) ? $role : null;
+        if (! $membership) {
+            return [];
+        }
+
+        return ClubMembershipRole::query()
+            ->where('club_membership_id', $membership->getKey())
+            ->pluck('role')
+            ->toArray();
+    }
+
+    public function hasClubRole(int $clubId, string|array $roles): bool
+    {
+        $userRoles = $this->clubRolesFor($clubId);
+
+        foreach ((array) $roles as $role) {
+            if (in_array($role, $userRoles, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function isMemberOf(int $clubId): bool
+    {
+        return ClubMembership::query()
+            ->where('club_id', $clubId)
+            ->where('user_id', $this->getKey())
+            ->exists();
     }
 }

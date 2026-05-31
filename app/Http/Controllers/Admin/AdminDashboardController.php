@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubInvitation;
+use App\Models\ClubMembership;
+use App\Models\ClubMembershipRole;
 use App\Models\Event;
 use App\Models\Fighter;
 use App\Models\Registration;
 use App\Models\User;
 use Illuminate\Contracts\View\Factory;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\View\View;
 
 class AdminDashboardController extends Controller
@@ -43,7 +44,7 @@ class AdminDashboardController extends Controller
                 ['method' => 'POST', 'path' => '/api/v1/clubs/invitations/accept', 'description' => 'Einladung annehmen'],
             ],
             'Sportbetrieb' => [
-                ['method' => 'GET', 'path' => '/api/v1/fighters', 'description' => 'Kaempfer laden'],
+                ['method' => 'GET', 'path' => '/api/v1/fighters', 'description' => 'Kämpfer laden'],
                 ['method' => 'POST', 'path' => '/api/v1/events', 'description' => 'Event anlegen'],
                 ['method' => 'POST', 'path' => '/api/v1/events/{event}/cancel', 'description' => 'Event absagen'],
                 ['method' => 'POST', 'path' => '/api/v1/registrations', 'description' => 'Einschreibung erstellen'],
@@ -51,13 +52,38 @@ class AdminDashboardController extends Controller
             ],
         ];
 
-        $adminClubs = DB::table('club_user')
-            ->join('clubs', 'clubs.id', '=', 'club_user.club_id')
-            ->where('club_user.user_id', auth()->id())
-            ->whereIn('club_user.role', ['manager', 'owner', 'admin'])
-            ->select('clubs.id', 'clubs.name', 'clubs.slug', 'club_user.role')
-            ->orderBy('clubs.name')
-            ->get();
+        $adminRoles = [
+            ClubMembershipRole::ROLE_CLUB_MANAGER,
+            ClubMembershipRole::ROLE_EVENT_MANAGER,
+        ];
+
+        $adminClubs = collect();
+
+        if ($currentUser) {
+            $adminClubs = ClubMembership::query()
+                ->with(['club:id,name,slug', 'roles'])
+                ->where('user_id', $currentUser->getKey())
+                ->whereHas('roles', fn ($query) => $query->whereIn('role', $adminRoles))
+                ->get()
+                ->flatMap(function (ClubMembership $membership) use ($adminRoles) {
+                    $club = $membership->club;
+
+                    if (! $club) {
+                        return [];
+                    }
+
+                    return $membership->roles
+                        ->whereIn('role', $adminRoles)
+                        ->map(fn (ClubMembershipRole $role) => (object) [
+                            'id' => $club->getKey(),
+                            'name' => $club->name,
+                            'slug' => $club->slug,
+                            'role' => $role->role,
+                        ]);
+                })
+                ->sortBy(['name', 'role'])
+                ->values();
+        }
 
         $dashboardClubs = $isSuperAdmin
             ? Club::query()
@@ -71,9 +97,10 @@ class AdminDashboardController extends Controller
                 ->get(['id', 'name', 'slug']);
 
         $switchableUsers = User::query()
-            ->with(['clubs' => function ($query): void {
-                $query->orderBy('clubs.name');
-            }])
+            ->with([
+                'memberships.club:id,name,slug',
+                'memberships.roles',
+            ])
             ->orderBy('name')
             ->when(! $isSuperAdmin, fn ($query) => $query->limit(20))
             ->get();

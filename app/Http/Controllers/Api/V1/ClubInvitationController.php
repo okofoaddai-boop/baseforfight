@@ -73,12 +73,12 @@ class ClubInvitationController extends Controller
             return response()->json(['message' => 'Club not found.'], 404);
         }
 
-        $club->users()->syncWithoutDetaching([
-            $user->getKey() => [
-                'role' => $invitation->role,
-                'joined_at' => now(),
-            ],
-        ]);
+        $role = (string) $invitation->role;
+        $validRoles = \App\Models\ClubMembershipRole::ALL_ROLES;
+        $rolesToAssign = in_array($role, $validRoles, true) ? [$role] : [\App\Models\ClubMembershipRole::ROLE_TRAINER];
+
+        $permissions = app(\App\Services\ClubPermissionService::class);
+        $permissions->addMembership($user, $club, $rolesToAssign);
 
         $invitation->update([
             'accepted_by_user_id' => $user->getKey(),

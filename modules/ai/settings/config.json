@@ -1,7 +1,7 @@
 {
     "provider": "google",
     "model": "gemini-2.5-flash",
-    "api_key": "AIzaSyAi5vfx1ETwZGRmsA5xVm_A726XQhBNJuQ",
+    "api_key": "AIzaSyCUd6tkA6hRgLHOb9mimZkXdXr5mWcE7zg",
     "base_url": "",
     "parameters": {
         "temperature": 0.2,

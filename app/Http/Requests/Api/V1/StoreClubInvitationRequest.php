@@ -15,7 +15,7 @@ class StoreClubInvitationRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'max:255'],
-            'role' => ['required', 'in:manager,admin,trainer,member,owner,coach'],
+            'role' => ['required', 'string', 'in:club_manager,event_manager,trainer'],
             'expires_in_days' => ['sometimes', 'integer', 'min:1', 'max:60'],
         ];
     }

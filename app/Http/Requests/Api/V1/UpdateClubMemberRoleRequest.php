@@ -14,7 +14,8 @@ class UpdateClubMemberRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role' => ['required', 'in:manager,admin,trainer,member,owner,coach'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'in:club_manager,event_manager,trainer'],
         ];
     }
 }

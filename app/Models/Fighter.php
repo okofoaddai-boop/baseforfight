@@ -25,6 +25,8 @@ class Fighter extends Model
         'boxing_bout_count_entries',
         'boxing_pass_entries',
         'status',
+        'is_demo',
+        'demo_batch',
     ];
 
     protected $casts = [
@@ -33,6 +35,7 @@ class Fighter extends Model
         'boxing_weight_entries' => 'array',
         'boxing_bout_count_entries' => 'array',
         'boxing_pass_entries' => 'array',
+        'is_demo' => 'boolean',
     ];
 
     public function club(): BelongsTo

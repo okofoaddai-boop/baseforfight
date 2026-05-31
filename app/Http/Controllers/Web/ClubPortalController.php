@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Club;
+use App\Models\ClubMembership;
+use App\Models\ClubMembershipRole;
 use App\Models\Event;
 use App\Models\Fighter;
 use App\Models\Registration;
+use App\Services\ClubPermissionService;
+use App\Services\RegistrationWorkflowService;
 use App\Services\Modules\AiEventExtractionService;
 use App\Services\Modules\AiSettingsStore;
 use App\Services\Modules\BoxingSettingsStore;
@@ -14,9 +18,9 @@ use App\Services\Modules\ModuleManager;
 use App\Services\Modules\PdfTextExtractor;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Throwable;
@@ -29,6 +33,8 @@ class ClubPortalController extends Controller
         private readonly AiSettingsStore $aiSettingsStore,
         private readonly PdfTextExtractor $pdfTextExtractor,
         private readonly AiEventExtractionService $aiEventExtractionService,
+        private readonly ClubPermissionService $clubPermissions,
+        private readonly RegistrationWorkflowService $registrationWorkflow,
     ) {
     }
 
@@ -36,29 +42,53 @@ class ClubPortalController extends Controller
     {
         $this->authorize('view', $club);
 
-        $members = DB::table('club_user')
-            ->join('users', 'users.id', '=', 'club_user.user_id')
-            ->where('club_user.club_id', $club->getKey())
-            ->orderBy('users.name')
-            ->select([
-                'users.id',
-                'users.name',
-                'users.email',
-                'club_user.role',
-                'club_user.joined_at',
-            ])
-            ->get();
+        $members = ClubMembership::query()
+            ->with(['user', 'roles'])
+            ->where('club_id', $club->getKey())
+            ->get()
+            ->map(function (ClubMembership $membership) {
+                $roleNames = $membership->roles->pluck('role')->all();
+                $roleLabels = [
+                    ClubMembershipRole::ROLE_CLUB_MANAGER => __('Club-Manager'),
+                    ClubMembershipRole::ROLE_EVENT_MANAGER => __('Veranstaltungsmanager'),
+                    ClubMembershipRole::ROLE_TRAINER => __('Trainer'),
+                ];
+                $obj = new \stdClass();
+                $obj->id        = $membership->user->getKey();
+                $obj->name      = $membership->user->name;
+                $obj->email     = $membership->user->email;
+                $obj->roles     = $roleNames;
+                $obj->role      = implode(' / ', array_map(
+                    static fn (string $role): string => $roleLabels[$role] ?? $role,
+                    $roleNames
+                ));
+                $obj->joined_at = $membership->joined_at;
+                return $obj;
+            })
+            ->sortBy('name')
+            ->values();
 
         $fighters = $club->fighters()
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
 
-        $trainers = $members->filter(fn ($member) => in_array($member->role, ['trainer', 'coach', 'manager', 'owner', 'admin'], true));
-        $isManager = $this->canManageClub($request, $club);
+        $trainers = $members->filter(fn ($member) => in_array(ClubMembershipRole::ROLE_TRAINER, $member->roles, true));
+        $canManageClub = $this->canManageClub($request, $club);
+        $canManageAthletes = $this->canManageAthletes($request, $club);
+        $canManageEvents = $this->canManageEvents($request, $club);
+        $currentUserRoles = $request->user()?->clubRolesFor((int) $club->getKey()) ?? [];
+        $roleLabels = [
+            ClubMembershipRole::ROLE_CLUB_MANAGER => 'Club-Manager',
+            ClubMembershipRole::ROLE_EVENT_MANAGER => 'Veranstaltungsmanager',
+            ClubMembershipRole::ROLE_TRAINER => 'Trainer',
+        ];
+        $roleSummary = collect($currentUserRoles)
+            ->map(fn (string $role): string => $roleLabels[$role] ?? $role)
+            ->implode(' / ');
         $clubEvents = $club->organizedEvents()
             ->withCount([
-                'registrations as registered_fighters_count' => fn ($query) => $query->where('status', '!=', 'cancelled'),
+                'registrations as registered_fighters_count' => fn ($query) => $query->where('status', \App\Models\Registration::STATUS_ACTIVE),
             ])
             ->orderByDesc('starts_at')
             ->get();
@@ -87,7 +117,10 @@ class ClubPortalController extends Controller
             'fighters' => $fighters,
             'trainers' => $trainers,
             'clubEvents' => $clubEvents,
-            'isManager' => $isManager,
+            'canManageClub' => $canManageClub,
+            'canManageAthletes' => $canManageAthletes,
+            'canManageEvents' => $canManageEvents,
+            'roleSummary' => $roleSummary !== '' ? $roleSummary : 'Mitglied',
             'activeTab' => $activeTab,
             'activeSportModules' => $activeSportModules,
             'boxingPackages' => $boxingPackages,
@@ -99,7 +132,7 @@ class ClubPortalController extends Controller
 
     public function aiExtractEventFromPdf(Request $request, Club $club): RedirectResponse
     {
-        $this->authorizeManager($request, $club);
+        $this->authorizeEventManager($request, $club);
 
         if (! $this->moduleManager->isActive('ai') || ! $this->aiSettingsStore->isConfigured()) {
             return redirect()
@@ -171,6 +204,7 @@ class ClubPortalController extends Controller
                 'currency' => $prefill['currency'] ?? null,
                 'max_registrations' => $prefill['max_registrations'] ?? null,
                 'allow_waitlist' => $prefill['allow_waitlist'] ?? '0',
+                'registration_approval_mode' => $prefill['registration_approval_mode'] ?? 'auto',
                 'status' => $prefill['status'] ?? 'draft',
                 'boxing_package_key' => $prefill['boxing_package_key'] ?? null,
                 'boxing_age_classes' => $prefill['boxing_age_classes'] ?? [],
@@ -183,7 +217,7 @@ class ClubPortalController extends Controller
 
     public function aiSuggestPairings(Request $request, Club $club, Event $event): RedirectResponse
     {
-        $this->authorizeManager($request, $club);
+        $this->authorizeEventManager($request, $club);
 
         if ((int) ($event->organizer_club_id ?? 0) !== (int) $club->getKey()) {
             abort(404);
@@ -200,9 +234,108 @@ class ClubPortalController extends Controller
             ->with('status', 'KI-Paarungsvorschlaege sind vorbereitet. Die eigentliche Vorschlagslogik folgt als naechster Schritt.');
     }
 
+    public function eventRegistrations(Request $request, Club $club, Event $event): View
+    {
+        $this->authorizeEventManager($request, $club);
+
+        if ((int) $event->organizer_club_id !== (int) $club->getKey()) {
+            abort(404);
+        }
+
+        $this->registrationWorkflow->lockBillingForEvent($event);
+        $event->refresh();
+
+        $registrationData = $this->buildEventRegistrationPanelData($request, $event);
+
+        return view('clubs.partials.event-registrations-panel', [
+            'club' => $club,
+            'event' => $event,
+            'filters' => $registrationData['filters'],
+            'groupedRegistrations' => $registrationData['groupedRegistrations'],
+            'registrationStats' => $registrationData['registrationStats'],
+            'filteredCount' => $registrationData['filteredCount'],
+            'totalCount' => $registrationData['totalCount'],
+        ]);
+    }
+
+    public function manageEventRegistrations(Request $request, Club $club, Event $event): RedirectResponse|JsonResponse
+    {
+        $this->authorizeEventManager($request, $club);
+
+        if ((int) $event->organizer_club_id !== (int) $club->getKey()) {
+            abort(404);
+        }
+
+        $this->registrationWorkflow->lockBillingForEvent($event);
+        $event->refresh();
+
+        $registrationIds = Registration::query()
+            ->where('event_id', $event->getKey())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $validated = $request->validate([
+            'registration_ids' => ['required', 'array', 'min:1'],
+            'registration_ids.*' => ['integer', Rule::in($registrationIds)],
+            'status' => ['required', Rule::in([
+                Registration::STATUS_ACTIVE,
+                Registration::STATUS_WAITING,
+                Registration::STATUS_WITHDRAWN,
+            ])],
+            'reason' => ['nullable', 'string', 'max:100'],
+            'registration_status_filter' => ['nullable', 'string'],
+            'registration_q' => ['nullable', 'string', 'max:120'],
+            'registration_group' => ['nullable', 'string'],
+            'registration_sort' => ['nullable', 'string'],
+        ]);
+
+        $registrations = Registration::query()
+            ->where('event_id', $event->getKey())
+            ->whereIn('id', (array) $validated['registration_ids'])
+            ->get();
+
+        $changed = 0;
+        foreach ($registrations as $registration) {
+            $before = (string) $registration->status;
+            $this->registrationWorkflow->transitionStatus(
+                $registration,
+                (string) $validated['status'],
+                $request->user(),
+                $validated['reason'] ?? 'club_portal_organizer_status_change',
+                ['source' => 'club_portal_modal']
+            );
+
+            if ($before !== (string) $validated['status']) {
+                $changed++;
+            }
+        }
+
+        $statusMessage = $changed > 0 ? $changed . ' Meldungen wurden aktualisiert.' : 'Keine Statusänderung erforderlich.';
+
+        if ($request->ajax()) {
+            return response()->json([
+                'message' => $statusMessage,
+            ]);
+        }
+
+        return redirect()
+            ->route('clubs.show', array_filter([
+                'club' => $club->slug,
+                'tab' => 'events',
+                'open_event' => $event->getKey(),
+                'event_modal_tab' => 'registrations',
+                'registration_status' => $this->normalizeRegistrationStatusFilter($validated['registration_status_filter'] ?? null),
+                'registration_q' => trim((string) ($validated['registration_q'] ?? '')),
+                'registration_group' => $this->normalizeRegistrationGroup($validated['registration_group'] ?? null),
+                'registration_sort' => $this->normalizeRegistrationSort($validated['registration_sort'] ?? null),
+            ], fn ($value) => $value !== null && $value !== ''))
+            ->with('status', $statusMessage);
+    }
+
     public function storeFighter(Request $request, Club $club): RedirectResponse
     {
-        $this->authorizeManager($request, $club);
+        $this->authorizeAthleteManager($request, $club);
 
         $activeModuleSlugs = $this->activeSportModuleSlugs();
 
@@ -270,7 +403,7 @@ class ClubPortalController extends Controller
 
     public function updateFighter(Request $request, Club $club, Fighter $fighter): RedirectResponse
     {
-        $this->authorizeManager($request, $club);
+        $this->authorizeAthleteManager($request, $club);
 
         if ((int) $fighter->club_id !== (int) $club->getKey()) {
             abort(404);
@@ -391,7 +524,7 @@ class ClubPortalController extends Controller
 
     public function storeEvent(Request $request, Club $club): RedirectResponse
     {
-        $this->authorizeManager($request, $club);
+        $this->authorizeEventManager($request, $club);
 
         $activeModuleSlugs = $this->activeSportModuleSlugs();
 
@@ -404,6 +537,7 @@ class ClubPortalController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'registration_deadline' => ['nullable', 'date', 'before_or_equal:starts_at'],
+            'registration_approval_mode' => ['required', Rule::in(['auto', 'manual'])],
             'max_registrations' => ['nullable', 'integer', 'min:1'],
             'allow_waitlist' => ['nullable', 'boolean'],
             'venue_name' => ['nullable', 'string', 'max:255'],
@@ -456,6 +590,7 @@ class ClubPortalController extends Controller
             'starts_at' => $validated['starts_at'],
             'ends_at' => $validated['ends_at'] ?? null,
             'registration_deadline' => $validated['registration_deadline'] ?? null,
+            'registration_approval_mode' => $validated['registration_approval_mode'],
             'max_registrations' => $validated['max_registrations'] ?? null,
             'allow_waitlist' => (bool) ($validated['allow_waitlist'] ?? false),
             'venue_name' => $validated['venue_name'] ?? null,
@@ -486,7 +621,7 @@ class ClubPortalController extends Controller
 
     public function updateEvent(Request $request, Club $club, Event $event): RedirectResponse
     {
-        $this->authorizeManager($request, $club);
+        $this->authorizeEventManager($request, $club);
 
         if ((int) $event->organizer_club_id !== (int) $club->getKey()) {
             abort(404);
@@ -502,6 +637,7 @@ class ClubPortalController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'registration_deadline' => ['nullable', 'date', 'before_or_equal:starts_at'],
+            'registration_approval_mode' => ['required', Rule::in(['auto', 'manual'])],
             'max_registrations' => ['nullable', 'integer', 'min:1'],
             'allow_waitlist' => ['nullable', 'boolean'],
             'venue_name' => ['nullable', 'string', 'max:255'],
@@ -548,6 +684,7 @@ class ClubPortalController extends Controller
             'starts_at' => $validated['starts_at'],
             'ends_at' => $validated['ends_at'] ?? null,
             'registration_deadline' => $validated['registration_deadline'] ?? null,
+            'registration_approval_mode' => $validated['registration_approval_mode'],
             'max_registrations' => $validated['max_registrations'] ?? null,
             'allow_waitlist' => (bool) ($validated['allow_waitlist'] ?? false),
             'venue_name' => $validated['venue_name'] ?? null,
@@ -582,11 +719,165 @@ class ClubPortalController extends Controller
         }
     }
 
+    private function authorizeAthleteManager(Request $request, Club $club): void
+    {
+        if (! $this->canManageAthletes($request, $club)) {
+            abort(403);
+        }
+    }
+
+    private function authorizeEventManager(Request $request, Club $club): void
+    {
+        if (! $this->canManageEvents($request, $club)) {
+            abort(403);
+        }
+    }
+
     private function canManageClub(Request $request, Club $club): bool
     {
-        $managerRole = $request->user()?->clubRoleFor((int) $club->getKey());
+        $user = $request->user();
+        if ($user === null) {
+            return false;
+        }
 
-        return in_array($managerRole, ['manager', 'owner', 'admin'], true) || (bool) $request->user()?->isPlatformAdmin();
+        return $this->clubPermissions->canManageClub($user, (int) $club->getKey());
+    }
+
+    private function canManageAthletes(Request $request, Club $club): bool
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return false;
+        }
+
+        return $this->clubPermissions->canManageAthletes($user, (int) $club->getKey());
+    }
+
+    private function canManageEvents(Request $request, Club $club): bool
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return false;
+        }
+
+        return $this->clubPermissions->canManageEvents($user, (int) $club->getKey());
+    }
+
+    private function buildEventRegistrationPanelData(Request $request, Event $event): array
+    {
+        $filters = [
+            'status' => $this->normalizeRegistrationStatusFilter($request->query('registration_status')),
+            'query' => trim($request->string('registration_q', '')->toString()),
+            'group' => $this->normalizeRegistrationGroup($request->query('registration_group')),
+            'sort' => $this->normalizeRegistrationSort($request->query('registration_sort')),
+        ];
+
+        $registrations = Registration::query()
+            ->with(['fighter.club', 'registeredBy'])
+            ->where('event_id', $event->getKey())
+            ->get();
+
+        $registrationStats = [
+            'active' => $registrations->where('status', Registration::STATUS_ACTIVE)->count(),
+            'waiting' => $registrations->where('status', Registration::STATUS_WAITING)->count(),
+            'withdrawn' => $registrations->where('status', Registration::STATUS_WITHDRAWN)->count(),
+            'billable' => $registrations->filter(fn (Registration $registration) => $registration->billable_at !== null)->count(),
+        ];
+
+        $filtered = $registrations
+            ->filter(function (Registration $registration) use ($filters): bool {
+                if ($filters['status'] !== 'all' && (string) $registration->status !== $filters['status']) {
+                    return false;
+                }
+
+                if ($filters['query'] === '') {
+                    return true;
+                }
+
+                $needle = mb_strtolower($filters['query']);
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    trim((string) (($registration->fighter?->first_name ?? '') . ' ' . ($registration->fighter?->last_name ?? ''))),
+                    (string) ($registration->fighter?->club?->name ?? ''),
+                    (string) ($registration->registeredBy?->name ?? ''),
+                    (string) ($registration->registeredBy?->email ?? ''),
+                ], fn ($value) => trim((string) $value) !== '')));
+
+                return str_contains($haystack, $needle);
+            })
+            ->sortBy([
+                fn (Registration $registration) => $filters['group'] === 'weight'
+                    ? $this->registrationWeightSortValue($registration)
+                    : mb_strtolower($this->registrationClubName($registration)),
+                fn (Registration $registration) => match ($filters['sort']) {
+                    'club' => mb_strtolower($this->registrationClubName($registration)),
+                    'fighter' => mb_strtolower($this->registrationFighterName($registration)),
+                    'changed_at' => $registration->status_changed_at?->timestamp ?? $registration->updated_at?->timestamp ?? 0,
+                    default => $this->registrationWeightSortValue($registration),
+                },
+                fn (Registration $registration) => mb_strtolower($this->registrationFighterName($registration)),
+            ])
+            ->values();
+
+        $groupedRegistrations = $filtered
+            ->groupBy(fn (Registration $registration) => $this->registrationGroupLabel($registration, $filters['group']));
+
+        return [
+            'filters' => $filters,
+            'groupedRegistrations' => $groupedRegistrations,
+            'registrationStats' => $registrationStats,
+            'filteredCount' => $filtered->count(),
+            'totalCount' => $registrations->count(),
+        ];
+    }
+
+    private function normalizeRegistrationStatusFilter(mixed $value): string
+    {
+        $normalized = trim((string) $value);
+
+        return in_array($normalized, ['all', Registration::STATUS_ACTIVE, Registration::STATUS_WAITING, Registration::STATUS_WITHDRAWN], true)
+            ? $normalized
+            : 'all';
+    }
+
+    private function normalizeRegistrationGroup(mixed $value): string
+    {
+        $normalized = trim((string) $value);
+
+        return in_array($normalized, ['club', 'weight'], true) ? $normalized : 'club';
+    }
+
+    private function normalizeRegistrationSort(mixed $value): string
+    {
+        $normalized = trim((string) $value);
+
+        return in_array($normalized, ['weight_class', 'club', 'fighter', 'changed_at'], true) ? $normalized : 'weight_class';
+    }
+
+    private function registrationGroupLabel(Registration $registration, string $group): string
+    {
+        if ($group === 'weight') {
+            $weightClass = trim((string) data_get($registration->fighter_snapshot, 'classes.weight', ''));
+            return $weightClass !== '' ? $weightClass : 'Ohne Gewichtsklasse';
+        }
+
+        return $this->registrationClubName($registration);
+    }
+
+    private function registrationWeightSortValue(Registration $registration): float
+    {
+        $weight = data_get($registration->fighter_snapshot, 'weight.weight_kg');
+
+        return is_numeric($weight) ? (float) $weight : 9999.0;
+    }
+
+    private function registrationClubName(Registration $registration): string
+    {
+        return trim((string) ($registration->fighter?->club?->name ?? 'Ohne Verein'));
+    }
+
+    private function registrationFighterName(Registration $registration): string
+    {
+        return trim((string) (($registration->fighter?->first_name ?? '') . ' ' . ($registration->fighter?->last_name ?? '')));
     }
 
     private function activeSportModules(): array
@@ -816,6 +1107,7 @@ class ClubPortalController extends Controller
             'currency' => $currency,
             'max_registrations' => is_numeric($extracted['max_registrations'] ?? null) ? (int) $extracted['max_registrations'] : null,
             'allow_waitlist' => (bool) ($extracted['allow_waitlist'] ?? false) ? '1' : '0',
+            'registration_approval_mode' => 'auto',
             'status' => $status,
             'boxing_package_key' => trim((string) ($extracted['boxing_package_key'] ?? '')),
             'boxing_age_classes' => array_values(array_filter((array) ($extracted['boxing_age_classes'] ?? []), fn ($value) => is_string($value) && trim($value) !== '')),

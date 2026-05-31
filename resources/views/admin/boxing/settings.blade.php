@@ -75,11 +75,11 @@
                                     {{ $activePackage === $packageKey ? 'Deaktivieren' : 'Aktivieren' }}
                                 </button>
                             </form>
-                            <form method="post" action="{{ route('admin.boxing.settings.update', ['section' => 'performance-classes']) }}" onsubmit="return confirm('Paket wirklich loeschen?');" onclick="event.stopPropagation();">
+                            <form method="post" action="{{ route('admin.boxing.settings.update', ['section' => 'performance-classes']) }}" onsubmit="return confirm('Paket wirklich löschen?');" onclick="event.stopPropagation();">
                                 @csrf
                                 <input type="hidden" name="_action" value="delete-package">
                                 <input type="hidden" name="package_key" value="{{ $packageKey }}">
-                                <button class="logout" type="submit" style="background:#dd6850;">Loeschen</button>
+                                <button class="logout" type="submit" style="background:#dd6850;">Löschen</button>
                             </form>
                         </div>
 
@@ -136,7 +136,7 @@
                             @php
                             @endphp
 
-                            {{-- Altersklassen-Formular (dict-Struktur: Code → alter/sex/time/break/rounds) --}}
+                            {{-- Altersklassen-Formular (dict-Struktur: Code â†’ alter/sex/time/break/rounds) --}}
                             <form method="post" action="{{ route('admin.boxing.settings.update', ['section' => 'age-classes']) }}" style="display:grid; gap:10px;">
                                 @csrf
                                 <input type="hidden" name="package_key" value="{{ $packageKey }}">
@@ -175,15 +175,15 @@
                                         </div>
                                         <div style="display:grid; grid-template-columns:55px repeat(9, 1fr); gap:4px;">
                                             <div style="font-size:11px; color:var(--ink-soft); display:flex; align-items:center;">Turnier</div>
-                                            <input name="rounds_A[]" type="number" min="0" value="{{ $acRounds['A'] ?? '' }}" style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="rounds_B[]" type="number" min="0" value="{{ $acRounds['B'] ?? '' }}" style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="rounds_C[]" type="number" min="0" value="{{ $acRounds['C'] ?? '' }}" style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="time_A[]"   type="number" min="0" value="{{ $acTime['A'] ?? '' }}"   style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="time_B[]"   type="number" min="0" value="{{ $acTime['B'] ?? '' }}"   style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="time_C[]"   type="number" min="0" value="{{ $acTime['C'] ?? '' }}"   style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="break_A[]"  type="number" min="0" value="{{ $acBreak['A'] ?? '' }}"  style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="break_B[]"  type="number" min="0" value="{{ $acBreak['B'] ?? '' }}"  style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                            <input name="break_C[]"  type="number" min="0" value="{{ $acBreak['C'] ?? '' }}"  style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
+                                            <input name="rounds_A[]" type="number" min="0" value="{{ $acRounds['A'] ?? '' }}" style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="rounds_B[]" type="number" min="0" value="{{ $acRounds['B'] ?? '' }}" style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="rounds_C[]" type="number" min="0" value="{{ $acRounds['C'] ?? '' }}" style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="time_A[]"   type="number" min="0" value="{{ $acTime['A'] ?? '' }}"   style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="time_B[]"   type="number" min="0" value="{{ $acTime['B'] ?? '' }}"   style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="time_C[]"   type="number" min="0" value="{{ $acTime['C'] ?? '' }}"   style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="break_A[]"  type="number" min="0" value="{{ $acBreak['A'] ?? '' }}"  style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="break_B[]"  type="number" min="0" value="{{ $acBreak['B'] ?? '' }}"  style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                            <input name="break_C[]"  type="number" min="0" value="{{ $acBreak['C'] ?? '' }}"  style="border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
                                         </div>
                                     </div>
                                 @endforeach
@@ -202,15 +202,15 @@
                                     </div>
                                     <div style="display:grid; grid-template-columns:55px repeat(9, 1fr); gap:4px;">
                                         <div></div>
-                                        <input name="rounds_A[]" type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="rounds_B[]" type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="rounds_C[]" type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="time_A[]"   type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="time_B[]"   type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="time_C[]"   type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="break_A[]"  type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="break_B[]"  type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
-                                        <input name="break_C[]"  type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="–">
+                                        <input name="rounds_A[]" type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="rounds_B[]" type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="rounds_C[]" type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="time_A[]"   type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="time_B[]"   type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="time_C[]"   type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="break_A[]"  type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="break_B[]"  type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
+                                        <input name="break_C[]"  type="number" min="0" style="border:1px dashed var(--line); border-radius:10px; padding:8px 4px; font-size:12px; text-align:center;" placeholder="â€“">
                                     </div>
                                 </div>
 
@@ -235,7 +235,7 @@
                                             <summary style="cursor:pointer; padding:10px; list-style:none; font-weight:700;">
                                                 {{ $acName }}
                                                 <span style="font-weight:400; color:var(--ink-soft);">({{ $ageCode }})</span>
-                                                <span style="font-weight:400; font-size:12px; color:var(--ink-soft);"> — {{ count($gewicht) }} Klassen</span>
+                                                <span style="font-weight:400; font-size:12px; color:var(--ink-soft);"> â€” {{ count($gewicht) }} Klassen</span>
                                             </summary>
                                             <div style="padding:0 10px 10px; display:grid; gap:8px;">
                                                 <div style="display:grid; grid-template-columns:70px 1.8fr 70px 1.2fr auto; gap:8px; font-size:12px; color:var(--ink-soft);">
@@ -280,7 +280,7 @@
                             @php
                                 $passKeywords = array_values(array_filter((array) ($package['pass_keywords'] ?? []), fn ($keyword) => is_string($keyword) && trim($keyword) !== ''));
                                 if (count($passKeywords) === 0) {
-                                    $passKeywords = ['Arzt gültig bis', 'KO-Sperre gültig bis', 'Registrierung gültig bis'];
+                                    $passKeywords = ['Arzt gÃ¼ltig bis', 'KO-Sperre gÃ¼ltig bis', 'Registrierung gÃ¼ltig bis'];
                                 }
                             @endphp
                             <form method="post" action="{{ route('admin.boxing.settings.update', ['section' => 'pass-keywords']) }}" style="display:grid; gap:10px;">

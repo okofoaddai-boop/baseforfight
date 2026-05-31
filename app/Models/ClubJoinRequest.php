@@ -19,10 +19,13 @@ class ClubJoinRequest extends Model
         'reviewed_by_user_id',
         'reviewed_at',
         'review_note',
+        'is_demo',
+        'demo_batch',
     ];
 
     protected $casts = [
         'reviewed_at' => 'datetime',
+        'is_demo' => 'boolean',
     ];
 
     public function club(): BelongsTo

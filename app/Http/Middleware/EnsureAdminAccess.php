@@ -4,7 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\ClubMembershipRole;
+use App\Models\ClubMembership;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureAdminAccess
@@ -21,12 +22,12 @@ class EnsureAdminAccess
             return $next($request);
         }
 
-        $isAdmin = DB::table('club_user')
-            ->where('user_id', $user->getKey())
-            ->whereIn('role', ['manager', 'admin'])
+        $isClubManager = ClubMembershipRole::query()
+            ->where('role', ClubMembershipRole::ROLE_CLUB_MANAGER)
+            ->whereHas('membership', fn ($q) => $q->where('user_id', $user->getKey()))
             ->exists();
 
-        if (! $isAdmin) {
+        if (! $isClubManager) {
             abort(403, 'Admin access required.');
         }
 

@@ -4,14 +4,23 @@ namespace App\Policies;
 
 use App\Models\Event;
 use App\Models\User;
+use App\Services\ClubPermissionService;
 
 class EventPolicy
 {
+    public function __construct(private readonly ClubPermissionService $permissions)
+    {
+    }
+
     public function view(User $user, Event $event): bool
     {
+        if ($user->isPlatformAdmin()) {
+            return true;
+        }
+
         $clubId = $event->getAttribute('organizer_club_id');
 
-        if (is_numeric($clubId) && $user->clubRoleFor((int) $clubId) !== null) {
+        if (is_numeric($clubId) && $user->isMemberOf((int) $clubId)) {
             return true;
         }
 
@@ -20,11 +29,7 @@ class EventPolicy
 
     public function createForClub(User $user, int $clubId): bool
     {
-        if ($user->isPlatformAdmin()) {
-            return true;
-        }
-
-        return in_array($user->clubRoleFor($clubId), ['manager', 'owner', 'admin'], true);
+        return $this->permissions->canManageEvents($user, $clubId);
     }
 
     public function update(User $user, Event $event): bool
@@ -32,10 +37,7 @@ class EventPolicy
         $clubId = $event->getAttribute('organizer_club_id');
 
         return is_numeric($clubId)
-            && (
-                $user->isPlatformAdmin()
-                || in_array($user->clubRoleFor((int) $clubId), ['manager', 'owner', 'admin'], true)
-            );
+            && $this->permissions->canManageEvents($user, (int) $clubId);
     }
 
     public function cancel(User $user, Event $event): bool

@@ -14,7 +14,7 @@ class UpdateRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'in:pending,waitlisted,confirmed,cancelled'],
+            'status' => ['required', 'in:active,waiting,withdrawn'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="de">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $club->name }} | BaseForFight</title>
+    @include('partials.app-assets')
     <style>
         :root {
             --bg: #f4f6f2;
@@ -20,22 +21,15 @@
 
         * { box-sizing: border-box; }
 
-        body {
-            margin: 0;
-            font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at 12% 10%, rgba(125, 185, 40, 0.14), transparent 32%),
-                radial-gradient(circle at 86% 14%, rgba(1, 103, 52, 0.1), transparent 26%),
-                linear-gradient(160deg, var(--bg), var(--bg-alt));
-            min-height: 100vh;
+        .page {
+            width: min(1480px, calc(100% - 24px));
+            margin: 0 auto;
+            padding: 1rem 0 2rem;
         }
 
-        .page {
-            width: min(1140px, calc(100% - 24px));
-            margin: 16px auto 26px;
+        .shell {
             display: grid;
-            gap: 14px;
+            gap: 16px;
         }
 
         .panel {
@@ -48,21 +42,8 @@
         .header {
             padding: 16px 18px;
             display: flex;
-            justify-content: space-between;
             gap: 14px;
             align-items: flex-start;
-        }
-
-        .breadcrumbs {
-            color: var(--ink-soft);
-            font-size: 0.95rem;
-        }
-
-        .breadcrumbs a,
-        .link {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 700;
         }
 
         h1 {
@@ -525,77 +506,230 @@
             color: var(--ink-soft);
         }
 
+        .registration-loading {
+            padding: 14px;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            background: #f7faf5;
+            color: var(--ink-soft);
+        }
+
+        .registration-toolbar {
+            display: grid;
+            grid-template-columns: minmax(140px, 0.8fr) minmax(220px, 1.3fr) minmax(170px, 0.9fr) minmax(170px, 0.9fr) auto auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .registration-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .management-topline {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .management-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .kpi-card {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .registration-results-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            color: var(--ink-soft);
+            font-size: 0.92rem;
+        }
+
+        .registration-group-card {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 14px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .registration-group-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .registration-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 860px;
+        }
+
+        .registration-table th,
+        .registration-table td {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+
+        .registration-table th {
+            color: var(--ink-soft);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .table-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid var(--line);
+            background: #f2f6ef;
+            color: var(--ink);
+        }
+
+        .status-badge.active {
+            background: #e9f6ec;
+            color: #0d6b32;
+            border-color: #b8dcc0;
+        }
+
+        .status-badge.waiting {
+            background: #fff6e8;
+            color: #8c5a00;
+            border-color: #e7cf97;
+        }
+
+        .status-badge.withdrawn {
+            background: #fff0ed;
+            color: #8d3c2f;
+            border-color: #e2b0a6;
+        }
+
+        .billable-flag {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #eef7e9;
+            color: var(--accent);
+            border: 1px solid #cfe3bf;
+        }
+
         @media (max-width: 920px) {
             .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .form-grid { grid-template-columns: 1fr; }
             .address-grid { grid-template-columns: 1fr 1fr; }
             .event-summary-grid { grid-template-columns: 1fr; }
+            .registration-toolbar { grid-template-columns: 1fr 1fr; }
+            .management-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 640px) {
             .row { flex-direction: column; }
             .stat-grid { grid-template-columns: 1fr; }
             .address-grid, .currency-field { grid-template-columns: 1fr; }
+            .registration-toolbar { grid-template-columns: 1fr; }
+            .management-kpis { grid-template-columns: 1fr; }
         }
     </style>
 </head>
-<body>
+<body class="app-shell">
+    @include('partials.main-navbar')
+
     <div class="page">
-        @if (session()->has('impersonator_id'))
-            <section class="panel" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <strong style="font-size:0.95rem;">Support-Simulation aktiv</strong>
-                <form method="post" action="{{ route('admin.impersonation.stop') }}">
-                    @csrf
-                    <button class="btn" type="submit">Zurueck zum Superadmin-Dashboard</button>
-                </form>
-            </section>
-        @endif
+        <div class="shell">
+            @if (session()->has('impersonator_id'))
+                <section class="panel" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <strong style="font-size:0.95rem;">Support-Simulation aktiv</strong>
+                    <form method="post" action="{{ route('admin.impersonation.stop') }}">
+                        @csrf
+                        <button class="btn" type="submit">Zurück zum Superadmin-Dashboard</button>
+                    </form>
+                </section>
+            @endif
 
-        <section class="panel">
-            <div class="header">
-                <div>
-                    <div class="breadcrumbs"><a href="{{ route('welcome') }}">Startseite</a> / {{ $club->name }}</div>
-                    <h1>{{ $club->name }}</h1>
-                    <div class="subtitle">Vereinsansicht mit klaren Reitern fuer Team, Datenpflege und Veranstaltungen.</div>
-                </div>
-                <a class="link" href="{{ route('welcome') }}">Zur Startseite</a>
-            </div>
-
-            <nav class="nav-tabs" aria-label="Club Reiter">
-                <a class="nav-link {{ $activeTab === 'overview' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'overview']) }}">Uebersicht</a>
-                <a class="nav-link {{ $activeTab === 'fighters' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'fighters']) }}">Kaempfer</a>
-                <a class="nav-link {{ $activeTab === 'trainers' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'trainers']) }}">Trainer</a>
-                <a class="nav-link {{ $activeTab === 'events' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'events']) }}">Veranstaltungen</a>
-                @if ($isManager)
-                    <a class="nav-link {{ $activeTab === 'club-data' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'club-data']) }}">Vereinsdaten</a>
-                    <a class="nav-link {{ $activeTab === 'billing' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'billing']) }}">Rechnungsdaten</a>
-                @endif
-            </nav>
-
-            <div class="content">
-                @if (session('status'))
-                    <div class="status" style="margin-bottom:12px;">{{ session('status') }}</div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="error" style="margin-bottom:12px;">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+            <section class="panel">
+                <div class="header">
+                    <div>
+                        <div class="app-eyebrow mb-2">{{ __('Vereinsportal') }}</div>
+                        <h1>{{ $club->name }}</h1>
+                        <div class="subtitle">Vereinsansicht. Hier regelst du alles für deinen Verein. Zusammen mit deinen Trainern siehst du die Daten zu deinen Athleten und Veranstaltungen.</div>
                     </div>
-                @endif
+                </div>
+                
+
+                <nav class="nav-tabs" aria-label="Club Reiter">
+                    <a class="nav-link {{ $activeTab === 'overview' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'overview']) }}">Übersicht</a>
+                    <a class="nav-link {{ $activeTab === 'fighters' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'fighters']) }}">Kämpfer</a>
+                    <a class="nav-link {{ $activeTab === 'trainers' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'trainers']) }}">Trainer</a>
+                    <a class="nav-link {{ $activeTab === 'events' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'events']) }}">Veranstaltungen</a>
+                    @if ($canManageClub)
+                        <a class="nav-link {{ $activeTab === 'club-data' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'club-data']) }}">Vereinsdaten</a>
+                        <a class="nav-link {{ $activeTab === 'billing' ? 'active' : '' }}" href="{{ route('clubs.show', ['club' => $club->slug, 'tab' => 'billing']) }}">Rechnungsdaten</a>
+                    @endif
+                </nav>
+
+                <div class="content">
+                    @if (session('status'))
+                        <div class="status" style="margin-bottom:12px;">{{ session('status') }}</div>
+                    @endif
+
+                    @if ($errors->any())
+                        <div class="error" style="margin-bottom:12px;">
+                            <ul>
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                 @if ($activeTab === 'overview')
-                    <h2 class="section-title">Vereinsuebersicht</h2>
+                    <h2 class="section-title">Vereinsübersicht</h2>
                     <div class="stat-grid">
                         <article class="stat">
                             <div class="stat-label">Trainer</div>
                             <div class="stat-value">{{ $trainers->count() }}</div>
                         </article>
                         <article class="stat">
-                            <div class="stat-label">Kaempfer</div>
+                            <div class="stat-label">Kämpfer</div>
                             <div class="stat-value">{{ $fighters->count() }}</div>
                         </article>
                         <article class="stat">
@@ -604,11 +738,11 @@
                         </article>
                         <article class="stat">
                             <div class="stat-label">Deine Rolle</div>
-                            <div class="stat-value" style="font-size:1rem;">{{ $isManager ? 'Manager' : 'Trainer' }}</div>
+                            <div class="stat-value" style="font-size:1rem;">{{ $roleSummary }}</div>
                         </article>
                     </div>
                 @elseif ($activeTab === 'fighters')
-                    <h2 class="section-title">Kaempferliste</h2>
+                    <h2 class="section-title">Kämpferliste</h2>
 
                     @php
                         $activeSportModules = (array) ($activeSportModules ?? []);
@@ -616,7 +750,7 @@
                         $openFighterId = (int) request()->query('edit_fighter', 0);
                         $returnEventId = (int) request()->query('return_event', 0);
                         $defaultCreateFighterModules = (array) old('sport_modules', in_array('boxing', $activeSportModuleSlugs, true) ? ['boxing'] : []);
-                        $boxingPassKeywords = array_values(array_filter((array) ($boxingPassKeywords ?? ['Arzt gueltig bis', 'KO-Sperre gueltig bis', 'Registrierung gueltig bis']), fn ($keyword) => is_string($keyword) && $keyword !== ''));
+                        $boxingPassKeywords = array_values(array_filter((array) ($boxingPassKeywords ?? ['Arzt gültig bis', 'KO-Sperre gültig bis', 'Registrierung gültig bis']), fn ($keyword) => is_string($keyword) && $keyword !== ''));
                         $createWeightDates = (array) old('boxing_weight_dates', ['']);
                         $createWeightValues = (array) old('boxing_weight_values', ['']);
                         $createBoutDates = (array) old('boxing_bout_dates', ['']);
@@ -630,15 +764,15 @@
                         }
                     @endphp
 
-                    @if ($isManager)
+                    @if ($canManageAthletes)
                         <div style="margin-bottom:12px; display:flex; justify-content:flex-end;">
-                            <button type="button" class="btn" data-open-modal="create-fighter-modal">Neuen Kaempfer anlegen</button>
+                            <button type="button" class="btn" data-open-modal="create-fighter-modal">Neuen Kämpfer anlegen</button>
                         </div>
 
                         <dialog id="create-fighter-modal" style="width:min(980px, calc(100% - 24px)); border:1px solid var(--line); border-radius:14px; padding:0;">
                             <form method="dialog" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); background:#f7faf5;">
-                                <strong>Neuer Kaempfer</strong>
-                                <button class="btn btn-soft" type="submit">Schliessen</button>
+                                <strong>Neuer Kämpfer</strong>
+                                <button class="btn btn-soft" type="submit">Schließen</button>
                             </form>
                             <form method="post" action="{{ route('clubs.fighters.store', $club) }}" style="padding:14px; max-height:75vh; overflow:auto;" data-fighter-form="create-fighter">
                                 @csrf
@@ -659,7 +793,7 @@
                                     <div class="form-row">
                                         <label for="fighter_sex_create">Geschlecht</label>
                                         <select id="fighter_sex_create" name="sex" required>
-                                            <option value="m" @selected(old('sex', 'm') === 'm')>maennlich</option>
+                                            <option value="m" @selected(old('sex', 'm') === 'm')>männlich</option>
                                             <option value="w" @selected(old('sex') === 'w')>weiblich</option>
                                         </select>
                                     </div>
@@ -674,7 +808,7 @@
                                     <div class="form-row" style="grid-column:1 / -1;">
                                         <label>Sportmodule</label>
                                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                            @foreach ($activeSportModules as $module)
+                                            @forelse ($activeSportModules as $module)
                                                 @php
                                                     $moduleSlug = (string) ($module['slug'] ?? '');
                                                     $moduleName = (string) ($module['name'] ?? $moduleSlug);
@@ -692,7 +826,9 @@
                                                         <span>{{ $moduleName }}</span>
                                                     </label>
                                                 @endif
-                                            @endforeach
+                                            @empty
+                                                <div class="muted">Keine Sportmodule aktiv!</div>
+                                            @endforelse
                                         </div>
                                     </div>
                                 </div>
@@ -810,7 +946,7 @@
                                                 </template>
                                             @else
                                                 <strong>{{ $moduleName }}</strong>
-                                                <div class="muted" style="margin-top:6px;">Sportartspezifische Details fuer dieses Modul folgen.</div>
+                                                <div class="muted" style="margin-top:6px;">Sportartspezifische Details für dieses Modul folgen.</div>
                                             @endif
                                         </section>
                                     @endif
@@ -826,8 +962,8 @@
                     <div class="list">
                         @forelse ($fighters as $fighter)
                             <article class="row" style="align-items:center;">
-                                <div>
-                                    <strong>{{ $fighter->first_name }} {{ $fighter->last_name }}</strong>
+                                <div style="min-width:0; flex:1;">
+                                    <strong>{{ trim($fighter->first_name . ' ' . $fighter->last_name) }}</strong>
                                     <div class="muted" style="margin-top:4px;">Status: {{ $fighter->status ?? 'active' }}</div>
                                     @php
                                         $latestWeightEntry = collect((array) ($fighter->boxing_weight_entries ?? []))
@@ -860,13 +996,13 @@
                                     @foreach ((array) ($fighter->sport_modules ?? []) as $fighterModule)
                                         <span class="pill">{{ strtoupper((string) $fighterModule) }}</span>
                                     @endforeach
-                                    @if ($isManager)
+                                    @if ($canManageAthletes)
                                         <button type="button" class="btn btn-soft" data-open-modal="edit-fighter-modal-{{ $fighter->getKey() }}">Bearbeiten</button>
                                     @endif
                                 </div>
                             </article>
 
-                            @if ($isManager)
+                            @if ($canManageAthletes)
                                 @php
                                     $fighterModules = (array) old('sport_modules', (array) ($fighter->sport_modules ?? []));
                                     $fighterWeightEntries = (array) ($fighter->boxing_weight_entries ?? []);
@@ -875,8 +1011,8 @@
                                 @endphp
                                 <dialog id="edit-fighter-modal-{{ $fighter->getKey() }}" style="width:min(980px, calc(100% - 24px)); border:1px solid var(--line); border-radius:14px; padding:0;">
                                     <form method="dialog" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); background:#f7faf5;">
-                                        <strong>Kaempfer bearbeiten</strong>
-                                        <button class="btn btn-soft" type="submit">Schliessen</button>
+                                        <strong>Kämpfer bearbeiten</strong>
+                                        <button class="btn btn-soft" type="submit">Schließen</button>
                                     </form>
                                     <form method="post" action="{{ route('clubs.fighters.update', ['club' => $club, 'fighter' => $fighter]) }}" style="padding:14px; max-height:75vh; overflow:auto;" data-fighter-form="edit-fighter-{{ $fighter->getKey() }}">
                                         @csrf
@@ -901,7 +1037,7 @@
                                             <div class="form-row">
                                                 <label>Geschlecht</label>
                                                 <select name="sex" required>
-                                                    <option value="m" @selected(old('sex', $fighter->sex ?? 'm') === 'm')>maennlich</option>
+                                                    <option value="m" @selected(old('sex', $fighter->sex ?? 'm') === 'm')>männlich</option>
                                                     <option value="w" @selected(old('sex', $fighter->sex) === 'w')>weiblich</option>
                                                 </select>
                                             </div>
@@ -916,7 +1052,7 @@
                                             <div class="form-row" style="grid-column:1 / -1;">
                                                 <label>Sportmodule</label>
                                                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                                    @foreach ($activeSportModules as $module)
+                                                    @forelse ($activeSportModules as $module)
                                                         @php
                                                             $moduleSlug = (string) ($module['slug'] ?? '');
                                                             $moduleName = (string) ($module['name'] ?? $moduleSlug);
@@ -934,7 +1070,9 @@
                                                                 <span>{{ $moduleName }}</span>
                                                             </label>
                                                         @endif
-                                                    @endforeach
+                                                    @empty
+                                                        <div class="muted">Keine Sportmodule aktiv!</div>
+                                                    @endforelse
                                                 </div>
                                             </div>
                                         </div>
@@ -1059,7 +1197,7 @@
                                                         </template>
                                                     @else
                                                         <strong>{{ $moduleName }}</strong>
-                                                        <div class="muted" style="margin-top:6px;">Sportartspezifische Details fuer dieses Modul folgen.</div>
+                                                        <div class="muted" style="margin-top:6px;">Sportartspezifische Details für dieses Modul folgen.</div>
                                                     @endif
                                                 </section>
                                             @endif
@@ -1072,7 +1210,7 @@
                                 </dialog>
                             @endif
                         @empty
-                            <div class="row">Keine Kaempfer vorhanden.</div>
+                            <div class="row">Keine Kämpfer vorhanden.</div>
                         @endforelse
                     </div>
                 @elseif ($activeTab === 'trainers')
@@ -1084,7 +1222,7 @@
                                     <strong>{{ $trainer->name }}</strong>
                                     <div class="muted" style="margin-top:4px;">{{ $trainer->email }}</div>
                                 </div>
-                                <span class="pill">{{ strtoupper($trainer->role) }}</span>
+                                <span class="pill">{{ $trainer->role }}</span>
                             </article>
                         @empty
                             <div class="row">Keine Trainer gefunden.</div>
@@ -1114,7 +1252,7 @@
                         ];
                     @endphp
 
-                    @if ($isManager)
+                    @if ($canManageEvents)
                         <div style="margin-bottom:12px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
                             @if ($isAiModuleReady)
                                 <form method="post" action="{{ route('clubs.events.ai.extract', $club) }}" enctype="multipart/form-data" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -1129,7 +1267,7 @@
 
                         <dialog id="create-event-modal" style="width:min(1080px, calc(100% - 24px)); border:1px solid var(--line); border-radius:14px; padding:0;">
                             <form method="dialog" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); background:#f7faf5;">
-                                <strong>🗓️ Neue Veranstaltung</strong>
+                                <strong>Neue Veranstaltung</strong>
                                 <button class="btn btn-soft" type="submit">Schließen</button>
                             </form>
                             @php
@@ -1263,6 +1401,13 @@
                                             <div class="form-row">
                                                 <label for="max_registrations_create_event">Max. Teilnehmerzahl</label>
                                                 <input id="max_registrations_create_event" type="number" min="1" name="max_registrations" value="{{ old('max_registrations') }}" data-summary-source="max_registrations">
+                                            </div>
+                                            <div class="form-row">
+                                                <label for="registration_approval_mode_create_event">Meldungen sind</label>
+                                                <select id="registration_approval_mode_create_event" name="registration_approval_mode" data-summary-source="registration_approval_mode">
+                                                    <option value="auto" @selected(old('registration_approval_mode', 'auto') === 'auto')>sofort gültig</option>
+                                                    <option value="manual" @selected(old('registration_approval_mode') === 'manual')>erst nach Freigabe gültig</option>
+                                                </select>
                                             </div>
                                             <div class="form-row" style="grid-column:1 / -1;">
                                                 <label for="event_original_pdf_create">Original-PDF</label>
@@ -1402,6 +1547,7 @@
                                             <div class="event-summary-value" data-summary-field="address">{{ trim(implode(', ', array_filter([old('venue_name'), old('address_line1'), trim(((string) old('postal_code')) . ' ' . ((string) old('city')))]))) ?: 'Adresse noch unvollständig' }}</div>
                                             <div class="muted">Startgebühr: <span data-summary-field="entry_fee">{{ $createEntryFeeAmount !== null && $createEntryFeeAmount !== '' ? $createEntryFeeAmount . ' ' . old('currency', 'EUR') : 'offen' }}</span></div>
                                             <div class="muted">Warteliste: <span data-summary-field="allow_waitlist">{{ (string) old('allow_waitlist', '0') === '1' ? 'Ja' : 'Nein' }}</span></div>
+                                            <div class="muted">Meldungen: <span data-summary-field="registration_approval_mode">{{ old('registration_approval_mode', 'auto') === 'manual' ? 'mit Freigabe' : 'sofort gültig' }}</span></div>
                                         </div>
                                         <div class="event-summary-card">
                                             <div class="event-summary-label">Box-Klassen</div>
@@ -1443,30 +1589,36 @@
                                         <span class="pill">{{ strtoupper((string) $clubEvent->sport_module) }}</span>
                                     @endif
                                     <span class="pill">{{ strtoupper($clubEvent->status) }}</span>
-                                    @if ($isManager && $isAiModuleReady)
+                                        <span class="pill">{{ ($clubEvent->registration_approval_mode ?? 'auto') === 'manual' ? 'FREIGABE' : 'AUTO' }}</span>
+                                    @if ($canManageEvents && $isAiModuleReady)
                                         <form method="post" action="{{ route('clubs.events.ai.pairings', ['club' => $club, 'event' => $clubEvent]) }}">
                                             @csrf
                                             <button type="submit" class="btn btn-soft">KI-Paarungen vorschlagen</button>
                                         </form>
                                     @endif
-                                    @if ($isManager)
+                                    @if ($canManageEvents)
                                         <button type="button" class="btn btn-soft" data-open-modal="edit-event-modal-{{ $clubEvent->getKey() }}">Bearbeiten</button>
                                     @endif
                                 </div>
                             </article>
 
-                            @if ($isManager)
+                            @if ($canManageEvents)
                                 @php
                                     $defaultUpdateSportModule = old('sport_module', $clubEvent->sport_module ?: (in_array('boxing', $eventSportModuleSlugs, true) ? 'boxing' : ($eventSportModuleSlugs[0] ?? '')));
                                     $updateBoxingPackageKey = old('boxing_package_key', $clubEvent->boxing_package_key ?: $boxingActivePackage ?: (array_key_first($boxingPackages) ?: ''));
                                     $updateEntryFeeAmount = $formatEventFeeAmount($clubEvent->entry_fee_cents);
+                                    $defaultEditEventTab = $activeTab === 'events'
+                                        && (int) request()->query('open_event') === (int) $clubEvent->getKey()
+                                        && request()->query('event_modal_tab') === 'registrations'
+                                            ? 'registrations'
+                                            : 'master-data';
                                 @endphp
                                 <dialog id="edit-event-modal-{{ $clubEvent->getKey() }}" style="width:min(1080px, calc(100% - 24px)); border:1px solid var(--line); border-radius:14px; padding:0;">
                                     <form method="dialog" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); background:#f7faf5;">
-                                        <strong>✏️ Veranstaltung bearbeiten</strong>
+                                        <strong>Veranstaltung bearbeiten</strong>
                                         <button class="btn btn-soft" type="submit">Schließen</button>
                                     </form>
-                                    <form method="post" action="{{ route('clubs.events.update', ['club' => $club, 'event' => $clubEvent]) }}" enctype="multipart/form-data" class="event-modal-form" data-event-form="event-{{ $clubEvent->getKey() }}" data-default-event-tab="master-data">
+                                    <form method="post" action="{{ route('clubs.events.update', ['club' => $club, 'event' => $clubEvent]) }}" enctype="multipart/form-data" class="event-modal-form" data-event-form="event-{{ $clubEvent->getKey() }}" data-default-event-tab="{{ $defaultEditEventTab }}">
                                         <input type="hidden" name="tab" value="events">
                                         <input type="hidden" name="location" value="{{ $clubEvent->location }}">
                                         <input type="hidden" name="address_line2" value="{{ $clubEvent->address_line2 }}">
@@ -1510,6 +1662,7 @@
                                             <a href="#event-tab-panel-edit-{{ $clubEvent->getKey() }}-master-data" id="event-tab-edit-{{ $clubEvent->getKey() }}-master-data" role="tab" aria-selected="true" aria-controls="event-tab-panel-edit-{{ $clubEvent->getKey() }}-master-data" tabindex="0" class="event-modal-tab-link is-active" data-event-tab="master-data">Basics</a>
                                             <a href="#event-tab-panel-edit-{{ $clubEvent->getKey() }}-organisation" id="event-tab-edit-{{ $clubEvent->getKey() }}-organisation" role="tab" aria-selected="false" aria-controls="event-tab-panel-edit-{{ $clubEvent->getKey() }}-organisation" tabindex="-1" class="event-modal-tab-link" data-event-tab="organisation">Organisation</a>
                                             <a href="#event-tab-panel-edit-{{ $clubEvent->getKey() }}-overview" id="event-tab-edit-{{ $clubEvent->getKey() }}-overview" role="tab" aria-selected="false" aria-controls="event-tab-panel-edit-{{ $clubEvent->getKey() }}-overview" tabindex="-1" class="event-modal-tab-link" data-event-tab="overview">Übersicht</a>
+                                            <a href="#event-tab-panel-edit-{{ $clubEvent->getKey() }}-registrations" id="event-tab-edit-{{ $clubEvent->getKey() }}-registrations" role="tab" aria-selected="false" aria-controls="event-tab-panel-edit-{{ $clubEvent->getKey() }}-registrations" tabindex="-1" class="event-modal-tab-link" data-event-tab="registrations">Meldungen</a>
                                         </div>
 
                                         <section id="event-tab-panel-edit-{{ $clubEvent->getKey() }}-master-data" class="event-tab-panel is-active" role="tabpanel" aria-labelledby="event-tab-edit-{{ $clubEvent->getKey() }}-master-data" data-event-tab-panel="master-data">
@@ -1590,6 +1743,13 @@
                                                     <div class="form-row">
                                                         <label for="event_max_{{ $clubEvent->getKey() }}">Max. Teilnehmerzahl</label>
                                                         <input id="event_max_{{ $clubEvent->getKey() }}" type="number" min="1" name="max_registrations" value="{{ $clubEvent->max_registrations }}" data-summary-source="max_registrations">
+                                                    </div>
+                                                    <div class="form-row">
+                                                        <label for="event_approval_{{ $clubEvent->getKey() }}">Meldungen sind</label>
+                                                        <select id="event_approval_{{ $clubEvent->getKey() }}" name="registration_approval_mode" data-summary-source="registration_approval_mode">
+                                                            <option value="auto" @selected(($clubEvent->registration_approval_mode ?? 'auto') === 'auto')>sofort gültig</option>
+                                                            <option value="manual" @selected(($clubEvent->registration_approval_mode ?? 'auto') === 'manual')>erst nach Freigabe gültig</option>
+                                                        </select>
                                                     </div>
                                                     <div class="form-row" style="grid-column:1 / -1;">
                                                         <label for="event_pdf_{{ $clubEvent->getKey() }}">Original-PDF (optional anhängen)</label>
@@ -1729,6 +1889,7 @@
                                                     <div class="event-summary-value" data-summary-field="address">{{ trim(implode(', ', array_filter([$clubEvent->venue_name, $clubEvent->address_line1, trim(((string) $clubEvent->postal_code) . ' ' . ((string) $clubEvent->city))]))) ?: 'Adresse noch unvollständig' }}</div>
                                                     <div class="muted">Startgebühr: <span data-summary-field="entry_fee">{{ $updateEntryFeeAmount !== '' ? $updateEntryFeeAmount . ' ' . ($clubEvent->currency ?? 'EUR') : 'offen' }}</span></div>
                                                     <div class="muted">Warteliste: <span data-summary-field="allow_waitlist">{{ $clubEvent->allow_waitlist ? 'Ja' : 'Nein' }}</span></div>
+                                                    <div class="muted">Meldungen: <span data-summary-field="registration_approval_mode">{{ ($clubEvent->registration_approval_mode ?? 'auto') === 'manual' ? 'mit Freigabe' : 'sofort gültig' }}</span></div>
                                                 </div>
                                                 <div class="event-summary-card">
                                                     <div class="event-summary-label">Box-Klassen</div>
@@ -1746,6 +1907,23 @@
                                                         <div class="muted" style="margin-bottom:6px;">Leistungsklassen</div>
                                                         <div class="event-summary-pills" data-summary-list="boxing_performance_classes"></div>
                                                     </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section id="event-tab-panel-edit-{{ $clubEvent->getKey() }}-registrations" class="event-tab-panel" role="tabpanel" aria-labelledby="event-tab-edit-{{ $clubEvent->getKey() }}-registrations" data-event-tab-panel="registrations" hidden>
+                                            <div class="event-section-card">
+                                                <h3 class="event-section-title">Meldungen</h3>
+                                                <div class="event-section-note">Diese Ansicht wird erst geladen, wenn du den Reiter öffnest. Filter und Sortierung laufen serverseitig pro Veranstaltung.</div>
+                                                <div
+                                                    data-event-registrations-shell
+                                                    data-registrations-url="{{ route('clubs.events.registrations', ['club' => $club, 'event' => $clubEvent]) }}"
+                                                    data-filter-status="{{ request()->query('registration_status', 'all') }}"
+                                                    data-filter-query="{{ request()->query('registration_q', '') }}"
+                                                    data-filter-group="{{ request()->query('registration_group', 'club') }}"
+                                                    data-filter-sort="{{ request()->query('registration_sort', 'weight_class') }}"
+                                                >
+                                                    <div class="registration-loading">Meldungen werden beim Öffnen dieses Reiters geladen.</div>
                                                 </div>
                                             </div>
                                         </section>
@@ -1835,6 +2013,22 @@
             </div>
         </section>
         <script>
+            var openDialog = function (modal) {
+                if (!modal) {
+                    return;
+                }
+
+                if (typeof modal.showModal === 'function') {
+                    if (!modal.open) {
+                        modal.showModal();
+                    }
+
+                    return;
+                }
+
+                modal.setAttribute('open', 'open');
+            };
+
             document.querySelectorAll('[data-open-modal]').forEach(function (button) {
                 button.addEventListener('click', function () {
                     var modalId = button.getAttribute('data-open-modal');
@@ -1843,27 +2037,35 @@
                     }
 
                     var modal = document.getElementById(modalId);
-                    if (!modal || typeof modal.showModal !== 'function') {
+                    if (!modal) {
                         return;
                     }
 
-                    modal.showModal();
+                    openDialog(modal);
                 });
             });
 
             var autoOpenModalId = '{{ $activeTab === 'fighters' && (($openFighterId ?? 0) > 0) ? ('edit-fighter-modal-' . $openFighterId) : '' }}';
             if (autoOpenModalId !== '') {
                 var autoModal = document.getElementById(autoOpenModalId);
-                if (autoModal && typeof autoModal.showModal === 'function') {
-                    autoModal.showModal();
+                if (autoModal) {
+                    openDialog(autoModal);
                 }
             }
 
             var autoOpenCreateEventModal = '{{ $activeTab === 'events' && old('open_create_event_modal') ? '1' : '' }}';
             if (autoOpenCreateEventModal === '1') {
                 var createEventModal = document.getElementById('create-event-modal');
-                if (createEventModal && typeof createEventModal.showModal === 'function') {
-                    createEventModal.showModal();
+                if (createEventModal) {
+                    openDialog(createEventModal);
+                }
+            }
+
+            var autoOpenEventModalId = '{{ $activeTab === 'events' && (int) request()->query('open_event') > 0 ? ('edit-event-modal-' . (int) request()->query('open_event')) : '' }}';
+            if (autoOpenEventModalId !== '') {
+                var autoEventModal = document.getElementById(autoOpenEventModalId);
+                if (autoEventModal) {
+                    openDialog(autoEventModal);
                 }
             }
 
@@ -1882,6 +2084,41 @@
                 form.querySelectorAll('[data-summary-field="' + key + '"]').forEach(function (node) {
                     node.textContent = value;
                 });
+            };
+
+            var fieldValue = function (form, selector) {
+                var field = form.querySelector(selector);
+
+                if (!field) {
+                    return '';
+                }
+
+                return typeof field.value === 'string' ? field.value : '';
+            };
+
+            var trimmedFieldValue = function (form, selector) {
+                return fieldValue(form, selector).trim();
+            };
+
+            var selectedOptionText = function (form, selector) {
+                var field = form.querySelector(selector);
+
+                if (!field || !field.selectedOptions || !field.selectedOptions.length) {
+                    return '';
+                }
+
+                return (field.selectedOptions[0].textContent || '').trim();
+            };
+
+            var optionPillLabel = function (input) {
+                if (!input) {
+                    return '';
+                }
+
+                var pill = input.closest('.option-pill');
+                var label = pill ? pill.querySelector('span') : null;
+
+                return label ? (label.textContent || '').trim() : '';
             };
 
             var renderSummaryPills = function (container, values) {
@@ -1959,7 +2196,7 @@
                     panel.style.display = panelKey === (target + '-' + selectedValue) ? 'grid' : 'none';
                 });
 
-                var selectedLabel = selectedSport ? (selectedSport.closest('.option-pill')?.querySelector('span')?.textContent || selectedValue) : 'Keine Sportart gewählt';
+                var selectedLabel = selectedSport ? (optionPillLabel(selectedSport) || selectedValue) : 'Keine Sportart gewählt';
                 setSummaryText(form, 'sport_module', selectedLabel);
             };
 
@@ -2000,19 +2237,20 @@
             };
 
             var syncEventSummary = function (form) {
-                var title = form.querySelector('input[name="title"]')?.value.trim() || 'Noch kein Titel';
-                var status = form.querySelector('select[name="status"]')?.selectedOptions?.[0]?.textContent?.trim() || 'Entwurf';
-                var startsAt = formatDateTimeValue(form.querySelector('input[name="starts_at"]')?.value || '', 'Kein Start gesetzt', true);
-                var endsAt = formatDateTimeValue(form.querySelector('input[name="ends_at"]')?.value || '', 'offen', false);
-                var deadline = formatDateTimeValue(form.querySelector('input[name="registration_deadline"]')?.value || '', 'offen', false);
-                var venueName = form.querySelector('input[name="venue_name"]')?.value.trim() || '';
-                var addressLine1 = form.querySelector('input[name="address_line1"]')?.value.trim() || '';
-                var postalCode = form.querySelector('input[name="postal_code"]')?.value.trim() || '';
-                var city = form.querySelector('input[name="city"]')?.value.trim() || '';
-                var amount = form.querySelector('input[name="entry_fee_amount"]')?.value.trim() || '';
-                var currency = (form.querySelector('input[name="currency"]')?.value.trim() || 'EUR').toUpperCase();
-                var allowWaitlist = form.querySelector('select[name="allow_waitlist"]')?.value === '1' ? 'Ja' : 'Nein';
-                var maxRegistrations = form.querySelector('input[name="max_registrations"]')?.value.trim() || '';
+                var title = trimmedFieldValue(form, 'input[name="title"]') || 'Noch kein Titel';
+                var status = selectedOptionText(form, 'select[name="status"]') || 'Entwurf';
+                var startsAt = formatDateTimeValue(fieldValue(form, 'input[name="starts_at"]'), 'Kein Start gesetzt', true);
+                var endsAt = formatDateTimeValue(fieldValue(form, 'input[name="ends_at"]'), 'offen', false);
+                var deadline = formatDateTimeValue(fieldValue(form, 'input[name="registration_deadline"]'), 'offen', false);
+                var venueName = trimmedFieldValue(form, 'input[name="venue_name"]');
+                var addressLine1 = trimmedFieldValue(form, 'input[name="address_line1"]');
+                var postalCode = trimmedFieldValue(form, 'input[name="postal_code"]');
+                var city = trimmedFieldValue(form, 'input[name="city"]');
+                var amount = trimmedFieldValue(form, 'input[name="entry_fee_amount"]');
+                var currency = (trimmedFieldValue(form, 'input[name="currency"]') || 'EUR').toUpperCase();
+                var allowWaitlist = fieldValue(form, 'select[name="allow_waitlist"]') === '1' ? 'Ja' : 'Nein';
+                var approvalMode = fieldValue(form, 'select[name="registration_approval_mode"]') === 'manual' ? 'mit Freigabe' : 'sofort gültig';
+                var maxRegistrations = trimmedFieldValue(form, 'input[name="max_registrations"]');
                 var address = [
                     venueName,
                     addressLine1,
@@ -2029,6 +2267,7 @@
                 setSummaryText(form, 'address', address || 'Adresse noch unvollständig');
                 setSummaryText(form, 'entry_fee', amount !== '' ? (amount + ' ' + currency) : 'offen');
                 setSummaryText(form, 'allow_waitlist', allowWaitlist);
+                setSummaryText(form, 'registration_approval_mode', approvalMode);
 
                 if (maxRegistrations !== '') {
                     setSummaryText(form, 'max_registrations', maxRegistrations);
@@ -2050,7 +2289,7 @@
                                 if (groupKey === 'boxing_sexes') {
                                     return input.value === 'm' ? 'Männlich' : (input.value === 'w' ? 'Weiblich' : input.value);
                                 }
-                                return input.closest('.option-pill')?.querySelector('span')?.textContent?.trim() || input.value;
+                                return optionPillLabel(input) || input.value;
                             }
                         ).filter(function (value) {
                             return value && value !== '';
@@ -2165,6 +2404,157 @@
                 }
             };
 
+            var buildRegistrationUrl = function (shell, formData) {
+                var baseUrl = shell.getAttribute('data-registrations-url') || '';
+                if (baseUrl === '') {
+                    return '';
+                }
+
+                var params = new URLSearchParams();
+                if (formData) {
+                    formData.forEach(function (value, key) {
+                        if (typeof value === 'string' && value !== '') {
+                            params.set(key, value);
+                        }
+                    });
+                } else {
+                    var filterStatus = shell.getAttribute('data-filter-status') || 'all';
+                    var filterQuery = shell.getAttribute('data-filter-query') || '';
+                    var filterGroup = shell.getAttribute('data-filter-group') || 'club';
+                    var filterSort = shell.getAttribute('data-filter-sort') || 'weight_class';
+
+                    if (filterStatus !== '') {
+                        params.set('registration_status', filterStatus);
+                    }
+                    if (filterQuery !== '') {
+                        params.set('registration_q', filterQuery);
+                    }
+                    if (filterGroup !== '') {
+                        params.set('registration_group', filterGroup);
+                    }
+                    if (filterSort !== '') {
+                        params.set('registration_sort', filterSort);
+                    }
+                }
+
+                var queryString = params.toString();
+
+                return queryString !== '' ? (baseUrl + '?' + queryString) : baseUrl;
+            };
+
+            var collectRegistrationFilterData = function (panel) {
+                var filterScope = panel.querySelector('[data-registration-filter-form]');
+                var data = new FormData();
+
+                if (!filterScope) {
+                    return data;
+                }
+
+                Array.prototype.forEach.call(filterScope.querySelectorAll('[name]'), function (field) {
+                    if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) {
+                        data.set(field.name, field.value || '');
+                    }
+                });
+
+                return data;
+            };
+
+            var renderRegistrationFeedback = function (panel, message, isError) {
+                var target = panel.querySelector('[data-registration-feedback]');
+                if (!target) {
+                    return;
+                }
+
+                target.innerHTML = '';
+
+                if (!message) {
+                    return;
+                }
+
+                var box = document.createElement('div');
+                box.className = isError ? 'error' : 'status';
+                box.textContent = message;
+                target.appendChild(box);
+            };
+
+            var loadEventRegistrations = function (form, panel, requestUrl) {
+                if (!form || !panel) {
+                    return;
+                }
+
+                var shell = panel.querySelector('[data-event-registrations-shell]');
+                if (!shell) {
+                    return;
+                }
+
+                var targetUrl = requestUrl || buildRegistrationUrl(shell);
+                if (targetUrl === '' || shell.getAttribute('data-loading') === '1') {
+                    return;
+                }
+
+                shell.setAttribute('data-loading', '1');
+                shell.innerHTML = '<div class="registration-loading">Meldungen werden geladen...</div>';
+
+                fetch(targetUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Registrierungen konnten nicht geladen werden.');
+                    }
+
+                    return response.text();
+                }).then(function (html) {
+                    shell.innerHTML = html;
+                    shell.setAttribute('data-loaded', '1');
+                }).catch(function () {
+                    shell.innerHTML = '<div class="error">Die Meldungen konnten gerade nicht geladen werden.</div>';
+                }).finally(function () {
+                    shell.removeAttribute('data-loading');
+                });
+            };
+
+            var submitRegistrationUpdate = function (form, panel, payload) {
+                var shell = panel.querySelector('[data-event-registrations-shell]');
+                if (!shell || !payload || !payload.get('status')) {
+                    return;
+                }
+
+                var manageUrl = payload.get('manage_url') || '';
+                payload.delete('manage_url');
+
+                if (manageUrl === '') {
+                    return;
+                }
+
+                var csrfToken = document.querySelector('meta[name="csrf-token"]');
+                renderRegistrationFeedback(panel, '', false);
+
+                fetch(manageUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken ? (csrfToken.getAttribute('content') || '') : '',
+                        'Accept': 'application/json',
+                    },
+                    body: payload,
+                    credentials: 'same-origin',
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Statusänderung fehlgeschlagen.');
+                    }
+
+                    return response.json();
+                }).then(function (data) {
+                    renderRegistrationFeedback(panel, data && data.message ? data.message : 'Meldungen wurden aktualisiert.', false);
+                    loadEventRegistrations(form, panel, buildRegistrationUrl(shell, collectRegistrationFilterData(panel)));
+                }).catch(function () {
+                    renderRegistrationFeedback(panel, 'Die Meldungen konnten nicht aktualisiert werden.', true);
+                });
+            };
+
             document.querySelectorAll('form[data-event-form]').forEach(function (form) {
                 var defaultTab = form.getAttribute('data-default-event-tab') || 'master-data';
 
@@ -2180,6 +2570,10 @@
                         var isActive = panel.getAttribute('data-event-tab-panel') === tabKey;
                         panel.classList.toggle('is-active', isActive);
                         panel.hidden = !isActive;
+
+                        if (isActive && tabKey === 'registrations') {
+                            loadEventRegistrations(form, panel);
+                        }
                     });
                 };
 
@@ -2197,6 +2591,89 @@
                             activateEventTab(nextLink.getAttribute('data-event-tab') || '');
                         });
                     });
+                });
+
+                form.addEventListener('click', function (event) {
+                    var target = event.target;
+                    if (!(target instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    var registrationsPanel = target.closest('[data-event-tab-panel="registrations"]');
+                    if (!registrationsPanel) {
+                        return;
+                    }
+
+                    var registrationShell = registrationsPanel.querySelector('[data-event-registrations-shell]');
+                    if (!registrationShell) {
+                        return;
+                    }
+
+                    if (target.hasAttribute('data-registration-apply')) {
+                        var filterData = collectRegistrationFilterData(registrationsPanel);
+                        registrationShell.setAttribute('data-filter-status', filterData.get('registration_status') || 'all');
+                        registrationShell.setAttribute('data-filter-query', filterData.get('registration_q') || '');
+                        registrationShell.setAttribute('data-filter-group', filterData.get('registration_group') || 'club');
+                        registrationShell.setAttribute('data-filter-sort', filterData.get('registration_sort') || 'weight_class');
+                        loadEventRegistrations(form, registrationsPanel, buildRegistrationUrl(registrationShell, filterData));
+                        return;
+                    }
+
+                    if (target.hasAttribute('data-registration-reset')) {
+                        registrationShell.setAttribute('data-filter-status', 'all');
+                        registrationShell.setAttribute('data-filter-query', '');
+                        registrationShell.setAttribute('data-filter-group', 'club');
+                        registrationShell.setAttribute('data-filter-sort', 'weight_class');
+                        renderRegistrationFeedback(registrationsPanel, '', false);
+                        loadEventRegistrations(form, registrationsPanel, registrationShell.getAttribute('data-registrations-url') || '');
+                        return;
+                    }
+
+                    if (target.hasAttribute('data-registration-group-submit')) {
+                        var groupStatusField = target.parentElement ? target.parentElement.querySelector('[data-registration-group-status]') : null;
+                        var rawIds = (target.getAttribute('data-registration-ids') || '').split(',').map(function (value) {
+                            return value.trim();
+                        }).filter(function (value) {
+                            return value !== '';
+                        });
+
+                        if (!groupStatusField || !rawIds.length) {
+                            return;
+                        }
+
+                        var groupPayload = collectRegistrationFilterData(registrationsPanel);
+                        groupPayload.append('manage_url', target.getAttribute('data-manage-url') || '');
+                        groupPayload.append('reason', target.getAttribute('data-reason') || 'club_portal_batch_group');
+                        groupPayload.append('status', groupStatusField.value || '');
+                        rawIds.forEach(function (registrationId) {
+                            groupPayload.append('registration_ids[]', registrationId);
+                        });
+                        submitRegistrationUpdate(form, registrationsPanel, groupPayload);
+                        return;
+                    }
+
+                    if (target.hasAttribute('data-registration-selection-submit')) {
+                        var groupCard = target.closest('.registration-group-card');
+                        var selectionStatusField = groupCard ? groupCard.querySelector('[data-registration-selection-status]') : null;
+                        var checkedIds = groupCard ? Array.prototype.map.call(
+                            groupCard.querySelectorAll('[data-registration-checkbox]:checked'),
+                            function (checkbox) { return checkbox.value; }
+                        ) : [];
+
+                        if (!selectionStatusField || !checkedIds.length) {
+                            renderRegistrationFeedback(registrationsPanel, 'Bitte mindestens eine Meldung auswählen.', true);
+                            return;
+                        }
+
+                        var selectionPayload = collectRegistrationFilterData(registrationsPanel);
+                        selectionPayload.append('manage_url', target.getAttribute('data-manage-url') || '');
+                        selectionPayload.append('reason', target.getAttribute('data-reason') || 'club_portal_batch_selection');
+                        selectionPayload.append('status', selectionStatusField.value || '');
+                        checkedIds.forEach(function (registrationId) {
+                            selectionPayload.append('registration_ids[]', registrationId);
+                        });
+                        submitRegistrationUpdate(form, registrationsPanel, selectionPayload);
+                    }
                 });
 
                 form.addEventListener('input', function (event) {
@@ -2295,8 +2772,9 @@
 
                 event.preventDefault();
 
+                var tabList = button.closest('[role="tablist"]');
                 var tabs = Array.prototype.filter.call(
-                    button.closest('[role="tablist"]')?.querySelectorAll(selector) || [],
+                    tabList ? tabList.querySelectorAll(selector) : [],
                     function (tabButton) {
                         return !tabButton.hidden && tabButton.style.display !== 'none';
                     }
@@ -2405,7 +2883,8 @@
                         }
 
                         var template = form.querySelector('template[data-boxing-row-template="' + key + '"]');
-                        var container = button.closest('[data-boxing-tab-panel]')?.querySelector('[data-boxing-row-container="' + key + '"]');
+                        var boxingTabPanel = button.closest('[data-boxing-tab-panel]');
+                        var container = boxingTabPanel ? boxingTabPanel.querySelector('[data-boxing-row-container="' + key + '"]') : null;
                         if (!template || !container || !template.content.firstElementChild) {
                             return;
                         }
@@ -2438,7 +2917,8 @@
                 syncFighterPanels(form, target);
                 form.querySelectorAll('[data-fighter-module-panel]').forEach(function (panel) {
                     if (panel.querySelector('.fighter-boxing-tab-btn')) {
-                        activateBoxingTab(panel, panel.querySelector('.fighter-boxing-tab-btn[aria-selected="true"]')?.getAttribute('data-boxing-tab') || '');
+                        var activeBoxingButton = panel.querySelector('.fighter-boxing-tab-btn[aria-selected="true"]');
+                        activateBoxingTab(panel, activeBoxingButton ? activeBoxingButton.getAttribute('data-boxing-tab') || '' : '');
                     }
                 });
             });
@@ -2465,6 +2945,10 @@
                 sync();
             });
         </script>
+
     </div>
+
+    @include('partials.main-footer')
+    @include('partials.app-scripts')
 </body>
 </html>
